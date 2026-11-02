@@ -31,7 +31,6 @@ public partial class MainViewModel : ViewModelBase
 
     private ExamViewModel? _exam;
     private PracticeViewModel? _practice;
-    private QuestionManageViewModel? _questions;
 
     private AppSettings _settings = new();
     private bool _initialized;
@@ -132,7 +131,12 @@ public partial class MainViewModel : ViewModelBase
         {
             PageKind.Exam => _exam ??= new ExamViewModel(GoHome),
             PageKind.Practice => _practice ??= new PracticeViewModel(GoHome),
-            PageKind.Questions => _questions ??= new QuestionManageViewModel(GoHome),
+            PageKind.Questions => new QuestionManageViewModel(
+                _store,
+                _dialogs,
+                SelectedBank?.Id,
+                SelectedBank?.Name,
+                GoHome),
             _ => Home,
         };
 
@@ -144,6 +148,9 @@ public partial class MainViewModel : ViewModelBase
     {
         CurrentPage = Home;
         StatusText = "就绪";
+
+        // 从题目页回来时题量可能变了，顺便刷新顶栏和状态栏。
+        _ = ReloadBanksAsync(SelectedBank?.Id);
     }
 
     [RelayCommand]

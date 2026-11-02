@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using ExamSystem.Models;
 using ExamSystem.ViewModels;
 using ExamSystem.Views;
 
@@ -44,6 +45,23 @@ public sealed class DialogService : IDialogService
     {
         var dialog = new BankManagerWindow { DataContext = viewModel };
         return await dialog.ShowDialog<bool>(_owner);
+    }
+
+    public async Task<Question?> EditQuestionAsync(Question? existing)
+    {
+        var dialog = new QuestionEditorWindow
+        {
+            DataContext = new QuestionEditorViewModel(existing),
+        };
+
+        var saved = await dialog.ShowDialog<bool>(_owner);
+        return saved ? dialog.Result : null;
+    }
+
+    public Task<bool> ConfirmAsync(string title, string message, string confirmText = "确定", bool destructive = false)
+    {
+        var dialog = new ConfirmWindow(title, message, confirmText, destructive);
+        return dialog.ShowDialog<bool>(_owner);
     }
 
     public async Task<IStorageFile?> PickImportFileAsync()

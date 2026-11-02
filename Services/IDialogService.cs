@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
+using ExamSystem.Models;
 using ExamSystem.ViewModels;
 
 namespace ExamSystem.Services;
@@ -15,6 +16,12 @@ public interface IDialogService
 
     /// <summary>打开题库管理窗口，返回是否改动过数据。</summary>
     Task<bool> ShowBankManagerAsync(BankManagerViewModel viewModel);
+
+    /// <summary>打开题目编辑器。保存返回编辑后的题目，取消返回 null。</summary>
+    Task<Question?> EditQuestionAsync(Question? existing);
+
+    /// <summary>通用确认框，确认返回 true。</summary>
+    Task<bool> ConfirmAsync(string title, string message, string confirmText = "确定", bool destructive = false);
 
     /// <summary>选一个要导入的 JSON 文件。</summary>
     Task<IStorageFile?> PickImportFileAsync();

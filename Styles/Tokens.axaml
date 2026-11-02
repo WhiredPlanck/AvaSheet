@@ -18,6 +18,8 @@
             <SolidColorBrush x:Key="DividerBrush" Color="#E3E7F1" />
             <SolidColorBrush x:Key="DangerBrush" Color="#DC2626" />
             <SolidColorBrush x:Key="DangerSoftBrush" Color="#FEF2F2" />
+            <SolidColorBrush x:Key="DangerHoverBrush" Color="#B91C1C" />
+            <SolidColorBrush x:Key="DangerForegroundBrush" Color="#FFFFFF" />
             <BoxShadows x:Key="CardShadow">0 1 3 0 #14000000</BoxShadows>
             <BoxShadows x:Key="CardShadowHover">0 12 28 0 #244F46E5</BoxShadows>
         </ResourceDictionary>
@@ -38,6 +40,8 @@
             <SolidColorBrush x:Key="DividerBrush" Color="#292D3B" />
             <SolidColorBrush x:Key="DangerBrush" Color="#F87171" />
             <SolidColorBrush x:Key="DangerSoftBrush" Color="#2A1618" />
+            <SolidColorBrush x:Key="DangerHoverBrush" Color="#FCA5A5" />
+            <SolidColorBrush x:Key="DangerForegroundBrush" Color="#1A1D27" />
             <BoxShadows x:Key="CardShadow">0 1 3 0 #40000000</BoxShadows>
             <BoxShadows x:Key="CardShadowHover">0 12 28 0 #4D4F46E5</BoxShadows>
         </ResourceDictionary>

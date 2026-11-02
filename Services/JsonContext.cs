@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ExamSystem.Models;
@@ -17,6 +18,8 @@ namespace ExamSystem.Services;
     DefaultIgnoreCondition = JsonIgnoreCondition.Never)]
 [JsonSerializable(typeof(QuestionBank))]
 [JsonSerializable(typeof(AppSettings))]
+[JsonSerializable(typeof(Question))]
+[JsonSerializable(typeof(List<Question>))]
 internal sealed partial class JsonContext : JsonSerializerContext
 {
     /// <summary>

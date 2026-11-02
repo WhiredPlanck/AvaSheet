@@ -11,24 +11,206 @@
         <vm:QuestionManageViewModel />
     </Design.DataContext>
 
-    <StackPanel Margin="40,32">
-        <Button Theme="{StaticResource LinkButtonTheme}"
-                Command="{Binding GoBackCommand}"
-                HorizontalAlignment="Left">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Data="{StaticResource IconBack}" Width="13" Height="13" />
-                <TextBlock Text="返回首页" VerticalAlignment="Center" />
-            </StackPanel>
-        </Button>
+    <UserControl.Styles>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="CornerRadius" Value="{DynamicResource TileCornerRadius}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+    </UserControl.Styles>
 
-        <TextBlock Classes="h1" Text="{Binding Title}" Margin="0,20,0,0" />
-        <TextBlock Classes="muted" Text="{Binding Description}" Margin="0,8,0,0" />
+    <Grid RowDefinitions="Auto,Auto,*" Margin="32,22,32,16" RowSpacing="14">
 
-        <Border Classes="emptyPanel" Margin="0,28,0,0">
-            <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Classes="cardTitle" Text="该模块正在开发中" HorizontalAlignment="Center" />
-                <TextBlock Classes="muted" Text="阶段 3 会在这里实现题目列表与编辑。" HorizontalAlignment="Center" />
+        <!-- 头部 -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="8">
+                <Button Theme="{StaticResource LinkButtonTheme}"
+                        Command="{Binding GoBackCommand}"
+                        HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource IconBack}" Width="13" Height="13" />
+                        <TextBlock Text="返回首页" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Classes="h1" Text="{Binding Title}" />
+                    <Border Classes="pill" VerticalAlignment="Center">
+                        <TextBlock Classes="pillText" Text="{Binding BankName}" />
+                    </Border>
+                </StackPanel>
+
+                <TextBlock Classes="small" Text="双击一行可以编辑，改动会立即保存。" />
             </StackPanel>
-        </Border>
-    </StackPanel>
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="10"
+                        VerticalAlignment="Bottom">
+                <Button Command="{Binding ImportQuestionsCommand}"
+                        ToolTip.Tip="从一个 JSON 文件（题目数组或含 questions 字段的对象）导入题目">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <PathIcon Data="{StaticResource IconImport}" Width="15" Height="15" />
+                        <TextBlock Text="导入题目" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding ExportQuestionsCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <PathIcon Data="{StaticResource IconExport}" Width="15" Height="15" />
+                        <TextBlock Text="导出题目" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="accent"
+                        Command="{Binding AddQuestionCommand}"
+                        IsEnabled="{Binding HasBank}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <PathIcon Data="{StaticResource IconPlus}" Width="15" Height="15" />
+                        <TextBlock Text="新建题目" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- 搜索 + 题型筛选 -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+
+            <TextBox Grid.Column="0"
+                     Width="280"
+                     Text="{Binding SearchText, Mode=TwoWay}"
+                     PlaceholderText="搜索题干、选项或标签" />
+
+            <Border Grid.Column="1" Classes="segmented" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button Classes="typeTab"
+                            Classes.active="{Binding IsAllFilter}"
+                            Content="全部"
+                            Command="{Binding FilterAllCommand}" />
+                    <Button Classes="typeTab"
+                            Classes.active="{Binding IsSingleFilter}"
+                            Content="单选"
+                            Command="{Binding FilterSingleCommand}" />
+                    <Button Classes="typeTab"
+                            Classes.active="{Binding IsMultipleFilter}"
+                            Content="多选"
+                            Command="{Binding FilterMultipleCommand}" />
+                    <Button Classes="typeTab"
+                            Classes.active="{Binding IsTrueFalseFilter}"
+                            Content="判断"
+                            Command="{Binding FilterTrueFalseCommand}" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Grid.Column="2"
+                       Classes="small"
+                       Text="{Binding StatsText}"
+                       VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- 列表 / 空状态 -->
+        <Grid Grid.Row="2">
+
+            <ListBox x:Name="QuestionList"
+                     ItemsSource="{Binding Questions}"
+                     SelectedItem="{Binding SelectedQuestion, Mode=TwoWay}"
+                     DoubleTapped="OnListDoubleTapped"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:QuestionRowViewModel">
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Number}"
+                                       Classes="small"
+                                       Width="24"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Top"
+                                       Margin="0,4,0,0" />
+
+                            <Border Grid.Column="1"
+                                    Classes="typeBadge"
+                                    VerticalAlignment="Top"
+                                    Margin="0,2,0,0">
+                                <TextBlock Classes="typeBadgeText" Text="{Binding TypeShort}" />
+                            </Border>
+
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Classes="questionStem"
+                                           MaxLines="3"
+                                           Text="{Binding Stem}" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Classes="small" Text="{Binding Footer}" />
+                                    <TextBlock Classes="small"
+                                               Text="{Binding TagsText}"
+                                               IsVisible="{Binding HasTags}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="3"
+                                        Orientation="Horizontal"
+                                        Spacing="2"
+                                        VerticalAlignment="Center">
+                                <Button Theme="{StaticResource LinkButtonTheme}"
+                                        Content="编辑"
+                                        Command="{Binding EditCommand}" />
+                                <Button Theme="{StaticResource DangerLinkButtonTheme}"
+                                        Content="删除"
+                                        Command="{Binding DeleteCommand}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- 没有选择题库 -->
+            <Border Classes="emptyPanel" IsVisible="{Binding !HasBank}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock Classes="cardTitle" Text="还没有选择题库" HorizontalAlignment="Center" />
+                    <TextBlock Classes="muted"
+                               Text="用顶栏的题库下拉框选一个，或者点右边的文件夹图标新建、导入。"
+                               HorizontalAlignment="Center" />
+                    <Button Classes="accent"
+                            Content="去管理题库"
+                            HorizontalAlignment="Center"
+                            Margin="0,6,0,0"
+                            Command="{Binding GoBackCommand}" />
+                </StackPanel>
+            </Border>
+
+            <!-- 题库是空的 -->
+            <Border Classes="emptyPanel" IsVisible="{Binding IsEmptyBank}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock Classes="cardTitle" Text="这个题库还没有题目" HorizontalAlignment="Center" />
+                    <TextBlock Classes="muted"
+                               Text="先手动新建一道，或者从 JSON 文件批量导入。"
+                               HorizontalAlignment="Center" />
+                    <Button Classes="accent"
+                            Content="新建第一道题"
+                            HorizontalAlignment="Center"
+                            Margin="0,6,0,0"
+                            Command="{Binding AddQuestionCommand}" />
+                </StackPanel>
+            </Border>
+
+            <!-- 筛选后没有结果 -->
+            <Border Classes="emptyPanel" IsVisible="{Binding NoMatch}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock Classes="cardTitle" Text="没有匹配的题目" HorizontalAlignment="Center" />
+                    <TextBlock Classes="muted"
+                               Text="换个关键词，或者把题型筛选切回「全部」。"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- 错误提示 -->
+            <Border Classes="notice"
+                    VerticalAlignment="Bottom"
+                    IsVisible="{Binding HasError}">
+                <TextBlock Classes="noticeText" Text="{Binding ErrorMessage}" />
+            </Border>
+        </Grid>
+    </Grid>
 </UserControl>
