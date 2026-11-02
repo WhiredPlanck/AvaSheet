@@ -135,4 +135,12 @@
             <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
         </Style>
     </ControlTheme>
+
+    <!-- 文字按钮（危险）：删除 -->
+    <ControlTheme x:Key="DangerLinkButtonTheme" TargetType="Button"
+                  BasedOn="{StaticResource LinkButtonTheme}">
+        <Style Selector="^:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        </Style>
+    </ControlTheme>
 </ResourceDictionary>

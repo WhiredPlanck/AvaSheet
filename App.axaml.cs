@@ -1,9 +1,11 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
+using ExamSystem.Services;
 using ExamSystem.ViewModels;
 using ExamSystem.Views;
 
@@ -25,10 +27,12 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainViewModel(),
-            };
+            var store = new BankStore();
+            var settingsStore = new AppSettingsStore();
+            var window = new MainWindow();
+
+            window.DataContext = new MainViewModel(store, settingsStore, new DialogService(window));
+            desktop.MainWindow = window;
         }
 
         base.OnFrameworkInitializationCompleted();

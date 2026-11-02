@@ -1,0 +1,24 @@
+using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
+using ExamSystem.ViewModels;
+
+namespace ExamSystem.Services;
+
+/// <summary>
+/// 把「弹窗」和「选文件」从 ViewModel 里抽出来，ViewModel 只描述意图。
+/// 实现放在 <see cref="DialogService"/>，由 App 在组装时注入。
+/// </summary>
+public interface IDialogService
+{
+    /// <summary>弹一个输入框问题库名称。取消返回 null。</summary>
+    Task<string?> PromptBankNameAsync(string title, string initialValue = "", string confirmText = "确定");
+
+    /// <summary>打开题库管理窗口，返回是否改动过数据。</summary>
+    Task<bool> ShowBankManagerAsync(BankManagerViewModel viewModel);
+
+    /// <summary>选一个要导入的 JSON 文件。</summary>
+    Task<IStorageFile?> PickImportFileAsync();
+
+    /// <summary>选导出目标，返回 null 表示用户取消。</summary>
+    Task<IStorageFile?> PickExportFileAsync(string suggestedFileName);
+}

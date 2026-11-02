@@ -1,9 +1,13 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ExamSystem.Models;
+using ExamSystem.Services;
 
 namespace ExamSystem.ViewModels;
 
@@ -21,29 +25,106 @@ public enum PageKind
 /// </summary>
 public partial class MainViewModel : ViewModelBase
 {
+    private readonly IBankStore _store;
+    private readonly AppSettingsStore _settingsStore;
+    private readonly IDialogService? _dialogs;
+
     private ExamViewModel? _exam;
     private PracticeViewModel? _practice;
     private QuestionManageViewModel? _questions;
 
+    private AppSettings _settings = new();
+    private bool _initialized;
+    private bool _suspendSettingsSave;
+
+    /// <summary>供 XAML 预览器使用。</summary>
     public MainViewModel()
+        : this(new BankStore(), new AppSettingsStore(), null)
     {
+    }
+
+    public MainViewModel(IBankStore store, AppSettingsStore settingsStore, IDialogService? dialogs)
+    {
+        _store = store;
+        _settingsStore = settingsStore;
+        _dialogs = dialogs;
+
         Home = new HomeViewModel(Navigate);
         CurrentPage = Home;
     }
 
     public HomeViewModel Home { get; }
 
-    /// <summary>题库列表占位，阶段 2 起改为 ObservableCollection&lt;BankSummary&gt;。</summary>
-    public ObservableCollection<string> Banks { get; } = [];
+    public ObservableCollection<BankSummary> Banks { get; } = [];
 
     [ObservableProperty]
     public partial ViewModelBase? CurrentPage { get; set; }
 
     [ObservableProperty]
-    public partial string? SelectedBank { get; set; }
+    public partial BankSummary? SelectedBank { get; set; }
 
     [ObservableProperty]
     public partial string StatusText { get; set; } = "就绪";
+
+    /// <summary>状态栏右侧：当前题库与题量。</summary>
+    public string BankStatusText => SelectedBank is null
+        ? "未选择题库"
+        : $"{SelectedBank.Name} · {SelectedBank.QuestionCount} 道题";
+
+    public bool StartMaximized { get; private set; }
+
+    // ---------------------------------------------------------------- 启动 / 持久化
+
+    public async Task InitializeAsync()
+    {
+        _settings = await _settingsStore.LoadAsync();
+        StartMaximized = _settings.IsWindowMaximized;
+
+        await ReloadBanksAsync(_settings.LastBankId);
+        _initialized = true;
+
+        // 首次启动（或上次选中的库已被删）时，把实际选中的库记下来。
+        if (_settings.LastBankId != SelectedBank?.Id)
+        {
+            _settings.LastBankId = SelectedBank?.Id;
+            await _settingsStore.SaveAsync();
+        }
+    }
+
+    public async Task SaveWindowStateAsync(bool isMaximized)
+    {
+        _settings.IsWindowMaximized = isMaximized;
+        await _settingsStore.SaveAsync();
+    }
+
+    private async Task ReloadBanksAsync(string? preferredId = null)
+    {
+        var target = preferredId ?? SelectedBank?.Id;
+
+        try
+        {
+            var list = await _store.ListAsync();
+
+            _suspendSettingsSave = true;
+            Banks.Clear();
+            foreach (var bank in list)
+            {
+                Banks.Add(bank);
+            }
+
+            SelectedBank = target is null
+                ? Banks.FirstOrDefault()
+                : Banks.FirstOrDefault(x => x.Id == target) ?? Banks.FirstOrDefault();
+            _suspendSettingsSave = false;
+        }
+        catch (Exception ex)
+        {
+            _suspendSettingsSave = false;
+            StatusText = "读取题库失败：" + ex.Message;
+        }
+    }
+
+    // ---------------------------------------------------------------- 导航
 
     private void Navigate(PageKind kind)
     {
@@ -66,7 +147,19 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenBankManager() => StatusText = "题库管理将在下一阶段开放";
+    private async Task OpenBankManagerAsync()
+    {
+        if (_dialogs is null)
+        {
+            StatusText = "当前环境没有可用的窗口服务";
+            return;
+        }
+
+        var manager = new BankManagerViewModel(_store, _dialogs, SelectedBank?.Id);
+        await _dialogs.ShowBankManagerAsync(manager);
+
+        await ReloadBanksAsync(manager.LastChangedBankId ?? SelectedBank?.Id);
+    }
 
     [RelayCommand]
     private void About() => StatusText = "ExamSystem 0.1 · 单机考试系统";
@@ -78,5 +171,20 @@ public partial class MainViewModel : ViewModelBase
         {
             desktop.Shutdown();
         }
+    }
+
+    // ---------------------------------------------------------------- 属性联动
+
+    partial void OnSelectedBankChanged(BankSummary? value)
+    {
+        OnPropertyChanged(nameof(BankStatusText));
+
+        if (!_initialized || _suspendSettingsSave)
+        {
+            return;
+        }
+
+        _settings.LastBankId = value?.Id;
+        _ = _settingsStore.SaveAsync();
     }
 }
