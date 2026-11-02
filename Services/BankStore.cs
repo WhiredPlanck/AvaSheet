@@ -135,6 +135,7 @@ public sealed class BankStore : IBankStore
 
         bank.Id = id;
         bank.Questions ??= [];
+        bank.WrongQuestionIds ??= [];
         return bank;
     }
 
@@ -214,6 +215,8 @@ public sealed class BankStore : IBankStore
         ArgumentNullException.ThrowIfNull(bank);
         bank.Name = ValidateName(bank.Name);
         bank.Questions ??= [];
+        bank.WrongQuestionIds ??= [];
+        bank.SchemaVersion = QuestionBank.CurrentSchemaVersion;
         bank.UpdatedAt = DateTimeOffset.Now;
         if (bank.CreatedAt == default)
         {
@@ -249,7 +252,8 @@ public sealed class BankStore : IBankStore
         string.IsNullOrWhiteSpace(bank.Name) ? id : bank.Name,
         bank.Description,
         bank.Questions?.Count ?? 0,
-        bank.UpdatedAt);
+        bank.UpdatedAt,
+        bank.WrongQuestionIds?.Count(w => bank.Questions?.Any(q => q.Id == w) == true) ?? 0);
 
     private static string Signature(FileInfo file) => $"{file.Length}:{file.LastWriteTimeUtc.Ticks}";
 

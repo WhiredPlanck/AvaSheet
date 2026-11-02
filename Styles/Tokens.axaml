@@ -20,6 +20,9 @@
             <SolidColorBrush x:Key="DangerSoftBrush" Color="#FEF2F2" />
             <SolidColorBrush x:Key="DangerHoverBrush" Color="#B91C1C" />
             <SolidColorBrush x:Key="DangerForegroundBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="#15803D" />
+            <SolidColorBrush x:Key="SuccessSoftBrush" Color="#ECFDF5" />
+            <SolidColorBrush x:Key="SuccessBorderBrush" Color="#86EFAC" />
             <BoxShadows x:Key="CardShadow">0 1 3 0 #14000000</BoxShadows>
             <BoxShadows x:Key="CardShadowHover">0 12 28 0 #244F46E5</BoxShadows>
         </ResourceDictionary>
@@ -42,6 +45,9 @@
             <SolidColorBrush x:Key="DangerSoftBrush" Color="#2A1618" />
             <SolidColorBrush x:Key="DangerHoverBrush" Color="#FCA5A5" />
             <SolidColorBrush x:Key="DangerForegroundBrush" Color="#1A1D27" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="#4ADE80" />
+            <SolidColorBrush x:Key="SuccessSoftBrush" Color="#12251A" />
+            <SolidColorBrush x:Key="SuccessBorderBrush" Color="#2F6B47" />
             <BoxShadows x:Key="CardShadow">0 1 3 0 #40000000</BoxShadows>
             <BoxShadows x:Key="CardShadowHover">0 12 28 0 #4D4F46E5</BoxShadows>
         </ResourceDictionary>

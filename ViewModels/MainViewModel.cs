@@ -30,7 +30,6 @@ public partial class MainViewModel : ViewModelBase
     private readonly IDialogService? _dialogs;
 
     private ExamViewModel? _exam;
-    private PracticeViewModel? _practice;
 
     private AppSettings _settings = new();
     private bool _initialized;
@@ -65,10 +64,13 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial string StatusText { get; set; } = "就绪";
 
-    /// <summary>状态栏右侧：当前题库与题量。</summary>
-    public string BankStatusText => SelectedBank is null
-        ? "未选择题库"
-        : $"{SelectedBank.Name} · {SelectedBank.QuestionCount} 道题";
+    /// <summary>状态栏右侧：当前题库、题量与错题数。</summary>
+    public string BankStatusText => SelectedBank switch
+    {
+        null => "未选择题库",
+        { WrongCount: > 0 } bank => $"{bank.Name} · {bank.QuestionCount} 道题 · 错题 {bank.WrongCount}",
+        var bank => $"{bank.Name} · {bank.QuestionCount} 道题",
+    };
 
     public bool StartMaximized { get; private set; }
 
@@ -130,7 +132,11 @@ public partial class MainViewModel : ViewModelBase
         CurrentPage = kind switch
         {
             PageKind.Exam => _exam ??= new ExamViewModel(GoHome),
-            PageKind.Practice => _practice ??= new PracticeViewModel(GoHome),
+            PageKind.Practice => new PracticeViewModel(
+                _store,
+                SelectedBank?.Id,
+                SelectedBank?.Name,
+                GoHome),
             PageKind.Questions => new QuestionManageViewModel(
                 _store,
                 _dialogs,

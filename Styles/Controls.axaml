@@ -210,4 +210,113 @@
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
 
+    <!-- ============ 平时练习 ============ -->
+    <Style Selector="ProgressBar.practice">
+        <Setter Property="Height" Value="6" />
+        <Setter Property="MinHeight" Value="6" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SubtleSurfaceBrush}" />
+    </Style>
+
+    <!-- 选项行：整行可点 -->
+    <Style Selector="Button.optionRow">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="Margin" Value="0,0,0,7" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.optionRow:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+    </Style>
+
+    <!-- 多选题里已勾选、尚未提交 -->
+    <Style Selector="Button.optionRow.selected">
+        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+    </Style>
+
+    <!-- 判定之后的两种情况 -->
+    <Style Selector="Button.optionRow.correct">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}" />
+        <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+
+    <Style Selector="Button.optionRow.wrong">
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+        <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+
+    <Style Selector="Border.optionKey">
+        <Setter Property="Width" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Background" Value="{DynamicResource SubtleSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.optionKeyText">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.optionText">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- 判定结果条 -->
+    <Style Selector="Border.resultBanner">
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource TileCornerRadius}" />
+        <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <Style Selector="Border.resultBanner.ok">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}" />
+    </Style>
+
+    <Style Selector="Border.resultBanner.bad">
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.resultTitle">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.resultTitle.ok">
+        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.resultTitle.bad">
+        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+
+    <!-- 一轮结束后的成绩 -->
+    <Style Selector="TextBlock.scoreValue">
+        <Setter Property="FontSize" Value="44" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
 </Styles>

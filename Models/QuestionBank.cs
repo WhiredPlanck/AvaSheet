@@ -7,8 +7,11 @@ namespace ExamSystem.Models;
 /// <summary>一个题库，对应磁盘上的一个 JSON 文件。</summary>
 public sealed class QuestionBank
 {
-    /// <summary>当前程序能读写的格式版本。</summary>
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>
+    /// 当前程序能读写的格式版本。v2 起多出 <see cref="WrongQuestionIds"/>，
+    /// 旧文件读进来是空集合。
+    /// </summary>
+    public const int CurrentSchemaVersion = 2;
 
     /// <summary>
     /// 题库 Id 就是文件名，不写进 JSON，避免内容和文件名不一致。
@@ -27,4 +30,10 @@ public sealed class QuestionBank
     public DateTimeOffset UpdatedAt { get; set; }
 
     public List<Question> Questions { get; set; } = [];
+
+    /// <summary>
+    /// 错题本：做错过的题目 Id。答对后从集合里移除，
+    /// 所以这里始终表示"当前还没掌握的题"。
+    /// </summary>
+    public List<string> WrongQuestionIds { get; set; } = [];
 }
