@@ -29,8 +29,6 @@ public partial class MainViewModel : ViewModelBase
     private readonly AppSettingsStore _settingsStore;
     private readonly IDialogService? _dialogs;
 
-    private ExamViewModel? _exam;
-
     private AppSettings _settings = new();
     private bool _initialized;
     private bool _suspendSettingsSave;
@@ -131,7 +129,12 @@ public partial class MainViewModel : ViewModelBase
     {
         CurrentPage = kind switch
         {
-            PageKind.Exam => _exam ??= new ExamViewModel(GoHome),
+            PageKind.Exam => new ExamViewModel(
+                _store,
+                SelectedBank?.Id,
+                SelectedBank?.Name,
+                _dialogs,
+                GoHome),
             PageKind.Practice => new PracticeViewModel(
                 _store,
                 SelectedBank?.Id,

@@ -11,24 +11,370 @@
         <vm:ExamViewModel />
     </Design.DataContext>
 
-    <StackPanel Margin="40,32">
-        <Button Theme="{StaticResource LinkButtonTheme}"
-                Command="{Binding GoBackCommand}"
-                HorizontalAlignment="Left">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Data="{StaticResource IconBack}" Width="13" Height="13" />
-                <TextBlock Text="返回首页" VerticalAlignment="Center" />
-            </StackPanel>
-        </Button>
+    <Grid RowDefinitions="Auto,*" Margin="32,22,32,16" RowSpacing="14">
 
-        <TextBlock Classes="h1" Text="{Binding Title}" Margin="0,20,0,0" />
-        <TextBlock Classes="muted" Text="{Binding Description}" Margin="0,8,0,0" />
+        <!-- 头部 -->
+        <StackPanel Grid.Row="0" Spacing="8">
+            <Button Theme="{StaticResource LinkButtonTheme}"
+                    Command="{Binding LeaveCommand}"
+                    HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Data="{StaticResource IconBack}" Width="13" Height="13" />
+                    <TextBlock Text="返回首页" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
 
-        <Border Classes="emptyPanel" Margin="0,28,0,0">
-            <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Classes="cardTitle" Text="该模块正在开发中" HorizontalAlignment="Center" />
-                <TextBlock Classes="muted" Text="阶段 5 会在这里实现组卷、计时与评分。" HorizontalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Classes="h1" Text="{Binding Title}" />
+                <Border Classes="pill" VerticalAlignment="Center">
+                    <TextBlock Classes="pillText" Text="{Binding BankName}" />
+                </Border>
+                <Border Classes="pill" VerticalAlignment="Center" IsVisible="{Binding IsRunning}">
+                    <TextBlock Classes="pillText" Text="{Binding PaperSizeText}" />
+                </Border>
             </StackPanel>
-        </Border>
-    </StackPanel>
+
+            <TextBlock Classes="small" Text="{Binding Description}" />
+
+            <Border Classes="notice" IsVisible="{Binding HasError}" Margin="0,2,0,0">
+                <TextBlock Classes="noticeText" Text="{Binding ErrorMessage}" />
+            </Border>
+        </StackPanel>
+
+        <!-- 内容 -->
+        <Grid Grid.Row="1">
+
+            <!-- 加载中 -->
+            <TextBlock Classes="muted"
+                       Text="正在加载题库…"
+                       HorizontalAlignment="Center"
+                       Margin="0,60,0,0"
+                       IsVisible="{Binding IsLoading}" />
+
+            <!-- 没有题目 -->
+            <Border Classes="emptyPanel"
+                    MaxWidth="620"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Top"
+                    IsVisible="{Binding IsEmpty}">
+                <StackPanel Spacing="10"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <TextBlock Classes="cardTitle" Text="这里还组不出一份卷子" HorizontalAlignment="Center" />
+                    <TextBlock Classes="muted"
+                               Text="先在顶栏选一个有题目的题库，或者去「管理题目」里添加几道。"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               MaxWidth="420" />
+                    <Button Classes="accent"
+                            Content="返回首页"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0"
+                            Command="{Binding LeaveCommand}" />
+                </StackPanel>
+            </Border>
+
+            <!-- 组卷设置 -->
+            <ScrollViewer IsVisible="{Binding IsConfig}"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel MaxWidth="640"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center">
+                    <Border Classes="formPanel" Padding="26">
+                        <StackPanel Spacing="10">
+                            <TextBlock Classes="fieldLabel" Text="组卷方式" />
+                            <TextBlock Text="{Binding PaperSummary}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource AppForegroundBrush}" />
+                            <TextBlock Classes="small" Text="{Binding BankSummaryText}" />
+
+                            <Border Height="1"
+                                    Background="{DynamicResource DividerBrush}"
+                                    Margin="0,10" />
+
+                            <TextBlock Classes="fieldLabel" Text="限时" />
+                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                                <Button Grid.Column="0"
+                                        Theme="{StaticResource IconButtonTheme}"
+                                        Width="32" Height="32"
+                                        Padding="0"
+                                        Content="−"
+                                        FontSize="16"
+                                        Command="{Binding DecreaseMinutesCommand}" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding LimitMinutes}"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AppForegroundBrush}" />
+                                    <TextBlock Classes="small" Text="分钟" VerticalAlignment="Bottom" Margin="0,0,0,3" />
+                                </StackPanel>
+                                <Button Grid.Column="2"
+                                        Theme="{StaticResource IconButtonTheme}"
+                                        Width="32" Height="32"
+                                        Padding="0"
+                                        Content="+"
+                                        FontSize="16"
+                                        HorizontalAlignment="Left"
+                                        Command="{Binding IncreaseMinutesCommand}" />
+                            </Grid>
+                            <TextBlock Classes="small" Text="默认每题 1 分钟，可以自己改。" />
+
+                            <Border Height="1"
+                                    Background="{DynamicResource DividerBrush}"
+                                    Margin="0,10" />
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0"
+                                           Classes="muted"
+                                           Text="{Binding FullScoreText}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1"
+                                        Classes="accent"
+                                        Content="开始考试"
+                                        Command="{Binding StartCommand}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 作答中 -->
+            <Grid ColumnDefinitions="*,240"
+                  ColumnSpacing="16"
+                  IsVisible="{Binding IsRunning}">
+
+                <Grid Grid.Column="0" RowDefinitions="*,Auto">
+
+                    <ScrollViewer Grid.Row="0"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <Border Classes="formPanel" Padding="22" Margin="0,0,0,0" VerticalAlignment="Top">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Border Classes="typeBadge">
+                                        <TextBlock Classes="typeBadgeText" Text="{Binding Current.TypeShort}" />
+                                    </Border>
+                                    <TextBlock Classes="small"
+                                               Text="{Binding Current.DifficultyStars}"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Classes="small"
+                                               Text="{Binding Current.TagsText}"
+                                               IsVisible="{Binding Current.HasTags}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <TextBlock Text="{Binding Current.Stem}"
+                                           TextWrapping="Wrap"
+                                           FontSize="17"
+                                           LineHeight="26"
+                                           Foreground="{DynamicResource AppForegroundBrush}"
+                                           Margin="0,8,0,2" />
+
+                                <ItemsControl ItemsSource="{Binding Current.Options}" Margin="0,10,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ExamOptionViewModel">
+                                            <Button Classes="optionRow"
+                                                    Classes.selected="{Binding IsSelected}"
+                                                    Command="{Binding SelectCommand}">
+                                                <DockPanel>
+                                                    <Border DockPanel.Dock="Left"
+                                                            Classes="optionKey"
+                                                            Margin="0,0,12,0"
+                                                            IsVisible="{Binding HasKey}">
+                                                        <TextBlock Classes="optionKeyText" Text="{Binding KeyText}" />
+                                                    </Border>
+                                                    <TextBlock DockPanel.Dock="Right"
+                                                               Text="✓"
+                                                               FontSize="15"
+                                                               FontWeight="SemiBold"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource AccentBrush}"
+                                                               IsVisible="{Binding IsSelected}" />
+                                                    <TextBlock Classes="optionText"
+                                                               Text="{Binding Text}"
+                                                               VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock Classes="small"
+                                           Text="多选题请把所有正确选项都选上；漏选、多选都算 0 分。"
+                                           Margin="0,6,0,0"
+                                           IsVisible="{Binding Current.IsMultiple}" />
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="0,12,0,0">
+                        <Button Grid.Column="0"
+                                Content="上一题"
+                                Command="{Binding PreviousCommand}"
+                                IsEnabled="{Binding !IsFirstQuestion}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="small"
+                                   Text="{Binding ProgressText}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="2"
+                                Classes="accent"
+                                Content="下一题"
+                                Command="{Binding NextCommand}"
+                                IsEnabled="{Binding !IsLastQuestion}" />
+                    </Grid>
+                </Grid>
+
+                <!-- 右侧：计时 + 答题卡 + 交卷 -->
+                <Border Grid.Column="1" Classes="formPanel" Padding="16" VerticalAlignment="Top">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="small" Text="剩余时间" />
+                        <TextBlock Classes="countdown"
+                                   Classes.low="{Binding IsTimeLow}"
+                                   Text="{Binding RemainingText}" />
+
+                        <Border Height="1"
+                                Background="{DynamicResource DividerBrush}"
+                                Margin="0,8" />
+
+                        <TextBlock Classes="small" Text="答题卡" />
+                        <ItemsControl ItemsSource="{Binding Navigator}" Margin="0,2,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamNavigatorItemViewModel">
+                                    <Button Classes="navChip"
+                                            Classes.current="{Binding IsCurrent}"
+                                            Classes.answered="{Binding IsAnswered}"
+                                            Content="{Binding Number}"
+                                            Command="{Binding JumpCommand}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Classes="small" Text="{Binding AnsweredText}" Margin="0,4,0,0" />
+
+                        <Border Height="1"
+                                Background="{DynamicResource DividerBrush}"
+                                Margin="0,8" />
+
+                        <Button Classes="accent"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="交卷"
+                                Command="{Binding SubmitCommand}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 成绩 -->
+            <ScrollViewer IsVisible="{Binding IsFinished}"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel MaxWidth="900" HorizontalAlignment="Stretch" VerticalAlignment="Top" Spacing="14">
+
+                    <Border Classes="formPanel" Padding="26">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="44">
+                                <StackPanel Grid.Column="0" Spacing="2">
+                                    <TextBlock Classes="small" Text="得分" />
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Classes="scoreValue" Text="{Binding ScoreText}" />
+                                        <TextBlock Classes="muted"
+                                                   Text="{Binding ScoreTotalText}"
+                                                   VerticalAlignment="Bottom"
+                                                   Margin="0,0,0,8" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Classes="small" Text="正确率" />
+                                    <TextBlock Text="{Binding AccuracyText}"
+                                               FontSize="30"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AccentBrush}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Classes="small" Text="用时" />
+                                    <TextBlock Text="{Binding ElapsedText}"
+                                               FontSize="15"
+                                               Foreground="{DynamicResource AppForegroundBrush}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Classes="muted" Text="{Binding ScoreSummary}" />
+
+                            <Border Classes="notice" IsVisible="{Binding HasUnanswered}">
+                                <TextBlock Classes="noticeText" Text="{Binding UnansweredText}" />
+                            </Border>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="10"
+                                        HorizontalAlignment="Left">
+                                <Button Classes="accent"
+                                        Content="再考一次"
+                                        Command="{Binding RestartCommand}" />
+                                <Button Theme="{StaticResource LinkButtonTheme}"
+                                        Content="返回首页"
+                                        Command="{Binding LeaveCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Classes="fieldLabel" Text="逐题回顾" Margin="2,4,0,0" />
+
+                    <ItemsControl ItemsSource="{Binding Review}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExamQuestionViewModel">
+                                <Border Classes="reviewRow">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Number}"
+                                                   FontSize="12"
+                                                   Width="22"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Top"
+                                                   Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}" />
+                                        <StackPanel Grid.Column="1" Spacing="5">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Border Classes="reviewBadge"
+                                                        Classes.ok="{Binding IsCorrect}"
+                                                        Classes.bad="{Binding !IsCorrect}"
+                                                        Classes.skipped="{Binding !IsAnswered}">
+                                                    <TextBlock Text="{Binding ResultText}" FontSize="11" FontWeight="SemiBold" />
+                                                </Border>
+                                                <TextBlock Classes="small" Text="{Binding TypeShort}" VerticalAlignment="Center" />
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding Stem}"
+                                                       TextWrapping="Wrap"
+                                                       LineHeight="21"
+                                                       Foreground="{DynamicResource AppForegroundBrush}" />
+
+                                            <TextBlock Classes="small"
+                                                       Text="{Binding AnswerKeysText, StringFormat='你的答案：{0}'}" />
+                                            <TextBlock Classes="small"
+                                                       Text="{Binding CorrectAnswerText, StringFormat='正确答案：{0}'}"
+                                                       Foreground="{DynamicResource SuccessBrush}" />
+                                            <TextBlock Classes="muted"
+                                                       Text="{Binding ExplanationText, StringFormat='解析：{0}'}"
+                                                       IsVisible="{Binding HasExplanation}"
+                                                       TextWrapping="Wrap"
+                                                       LineHeight="20"
+                                                       Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
 </UserControl>

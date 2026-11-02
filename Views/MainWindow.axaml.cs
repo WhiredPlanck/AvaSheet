@@ -6,6 +6,8 @@ namespace ExamSystem.Views;
 
 public partial class MainWindow : Window
 {
+    private bool _closeConfirmed;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -29,11 +31,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnClosing(object? sender, WindowClosingEventArgs e)
+    private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (DataContext is MainViewModel viewModel)
+        if (DataContext is not MainViewModel viewModel)
         {
-            _ = viewModel.SaveWindowStateAsync(WindowState == WindowState.Maximized);
+            return;
         }
+
+        // 考试进行中关窗口，和点「返回首页」一样要先确认，否则一路捷径绕过作废提示。
+        if (!_closeConfirmed && viewModel.CurrentPage is ExamViewModel exam && !exam.CanExitWithoutPrompt)
+        {
+            e.Cancel = true;
+
+            if (await exam.ConfirmExitAsync())
+            {
+                _closeConfirmed = true;
+                Close();
+            }
+
+            return;
+        }
+
+        _ = viewModel.SaveWindowStateAsync(WindowState == WindowState.Maximized);
     }
 }
