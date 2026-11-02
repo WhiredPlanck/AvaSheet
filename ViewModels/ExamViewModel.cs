@@ -102,6 +102,12 @@ public sealed partial class ExamViewModel : PageViewModelBase
     [ObservableProperty]
     public partial string? ErrorMessage { get; set; }
 
+    /// <summary>交卷后「本次错题已收进错题本」的提示，没收录时为 null。</summary>
+    [ObservableProperty]
+    public partial string? WrongBookNote { get; set; }
+
+    public bool HasWrongBookNote => !string.IsNullOrEmpty(WrongBookNote);
+
     /// <summary>用户可改的限时（分钟）。默认每题 1 分钟。</summary>
     [ObservableProperty]
     public partial int LimitMinutes { get; set; } = 1;
@@ -305,6 +311,7 @@ public sealed partial class ExamViewModel : PageViewModelBase
         Score = 0;
         _submitted = false;
         ErrorMessage = null;
+        WrongBookNote = null;
 
         var minutes = Math.Clamp(LimitMinutes, 1, 600);
         _remaining = TimeSpan.FromMinutes(minutes);
@@ -524,8 +531,59 @@ public sealed partial class ExamViewModel : PageViewModelBase
             }
         }
 
+        await CollectWrongQuestionsAsync();
+
         Phase = ExamPhase.Finished;
         NotifyAll();
+    }
+
+    /// <summary>把这次答错的题收进题库的错题本；错题本本来就有，就只提示一下。</summary>
+    private async Task CollectWrongQuestionsAsync()
+    {
+        WrongBookNote = null;
+
+        if (_store is null || _bank is null)
+        {
+            return;
+        }
+
+        var wrongIds = Questions
+            .Where(q => q.IsAnswered && !q.IsCorrect)
+            .Select(q => q.Question.Id)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (wrongIds.Count == 0)
+        {
+            return;
+        }
+
+        var existing = _bank.WrongQuestionIds ?? [];
+        var added = wrongIds
+            .Where(id => !existing.Contains(id, StringComparer.Ordinal))
+            .ToList();
+
+        if (added.Count == 0)
+        {
+            WrongBookNote = $"本次答错的 {wrongIds.Count} 道题原本就在错题本里。";
+            return;
+        }
+
+        try
+        {
+            _bank.WrongQuestionIds = [.. existing, .. added];
+            await _store.SaveAsync(_bank);
+
+            WrongBookNote = wrongIds.Count == added.Count
+                ? $"本次答错的 {wrongIds.Count} 道题已加入错题本。"
+                : $"本次答错的 {wrongIds.Count} 道题已加入错题本（其中 {added.Count} 道是新收录的）。";
+        }
+        catch (Exception ex)
+        {
+            // 错题本写失败同样不影响看成绩。
+            var message = "错题没能写入错题本：" + ex.Message;
+            ErrorMessage = string.IsNullOrEmpty(ErrorMessage) ? message : ErrorMessage + "　" + message;
+        }
     }
 
     /// <summary>把这一份卷子的成绩与逐题作答整理成一条记录。</summary>
@@ -649,6 +707,7 @@ public sealed partial class ExamViewModel : PageViewModelBase
         OnPropertyChanged(nameof(ElapsedText));
         OnPropertyChanged(nameof(UnansweredText));
         OnPropertyChanged(nameof(HasUnanswered));
+        OnPropertyChanged(nameof(HasWrongBookNote));
         OnPropertyChanged(nameof(RemainingText));
         OnPropertyChanged(nameof(IsTimeLow));
         OnPropertyChanged(nameof(CanExitWithoutPrompt));

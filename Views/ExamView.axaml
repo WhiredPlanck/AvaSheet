@@ -312,6 +312,12 @@
                                 <TextBlock Classes="noticeText" Text="{Binding UnansweredText}" />
                             </Border>
 
+                            <TextBlock Classes="small"
+                                       Text="{Binding WrongBookNote}"
+                                       IsVisible="{Binding HasWrongBookNote}"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       TextWrapping="Wrap" />
+
                             <StackPanel Orientation="Horizontal"
                                         Spacing="10"
                                         HorizontalAlignment="Left">
