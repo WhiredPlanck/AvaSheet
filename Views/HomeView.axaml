@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ExamSystem.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1080" d:DesignHeight="620"
+             x:Class="ExamSystem.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+
+    <Design.DataContext>
+        <vm:HomeViewModel />
+    </Design.DataContext>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="40,36,40,36" RowDefinitions="Auto,*">
+
+            <StackPanel Grid.Row="0" Spacing="8">
+                <TextBlock Classes="h1" Text="{Binding Headline}" />
+                <TextBlock Classes="muted" Text="{Binding Subheadline}" />
+            </StackPanel>
+
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="*,*,*"
+                  ColumnSpacing="18"
+                  Margin="0,28,0,0"
+                  Height="220"
+                  VerticalAlignment="Top">
+
+                <!-- 模拟考试 -->
+                <Button Grid.Column="0"
+                        Theme="{StaticResource CardButtonTheme}"
+                        Command="{Binding OpenExamCommand}">
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <Border Grid.Row="0" Classes="iconTile" HorizontalAlignment="Left">
+                            <PathIcon Data="{StaticResource IconExam}"
+                                      Width="22" Height="22"
+                                      Foreground="{DynamicResource AccentBrush}" />
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Spacing="7" Margin="0,16,0,0">
+                            <TextBlock Classes="cardTitle" Text="模拟考试" />
+                            <TextBlock Classes="muted"
+                                       TextWrapping="Wrap"
+                                       Text="按题型组卷，限时作答，交卷后统一评分。" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2" Classes="cardAction" Text="开始 →" />
+                    </Grid>
+                </Button>
+
+                <!-- 平时练习 -->
+                <Button Grid.Column="1"
+                        Theme="{StaticResource CardButtonTheme}"
+                        Command="{Binding OpenPracticeCommand}">
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <Border Grid.Row="0" Classes="iconTile" HorizontalAlignment="Left">
+                            <PathIcon Data="{StaticResource IconPractice}"
+                                      Width="22" Height="22"
+                                      Foreground="{DynamicResource AccentBrush}" />
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Spacing="7" Margin="0,16,0,0">
+                            <TextBlock Classes="cardTitle" Text="平时练习" />
+                            <TextBlock Classes="muted"
+                                       TextWrapping="Wrap"
+                                       Text="逐题作答、即时判定，答完展开解析，并记录错题。" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2" Classes="cardAction" Text="开始 →" />
+                    </Grid>
+                </Button>
+
+                <!-- 管理题目 -->
+                <Button Grid.Column="2"
+                        Theme="{StaticResource CardButtonTheme}"
+                        Command="{Binding OpenQuestionsCommand}">
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <Border Grid.Row="0" Classes="iconTile" HorizontalAlignment="Left">
+                            <PathIcon Data="{StaticResource IconQuestions}"
+                                      Width="22" Height="22"
+                                      Foreground="{DynamicResource AccentBrush}" />
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Spacing="7" Margin="0,16,0,0">
+                            <TextBlock Classes="cardTitle" Text="管理题目" />
+                            <TextBlock Classes="muted"
+                                       TextWrapping="Wrap"
+                                       Text="增删改查、按类型筛选，支持批量导入与导出。" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2" Classes="cardAction" Text="打开 →" />
+                    </Grid>
+                </Button>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

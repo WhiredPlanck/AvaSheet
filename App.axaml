@@ -9,7 +9,31 @@
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <Application.Resources>
+        <!--
+            应用级资源字典必须包在 ResourceDictionary / MergedDictionaries 里，
+            直接把裸元素放到 Application.Resources 下在某些加载路径会静默失效。
+        -->
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://ExamSystem/Styles/Tokens.axaml" />
+                <ResourceInclude Source="avares://ExamSystem/Styles/Icons.axaml" />
+                <ResourceInclude Source="avares://ExamSystem/Styles/Themes.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 强调色：靛蓝 #4F46E5。覆盖这一组后，按钮、焦点框、选中项全部跟着变。 -->
+            <Color x:Key="SystemAccentColor">#4F46E5</Color>
+            <Color x:Key="SystemAccentColorLight1">#6366F1</Color>
+            <Color x:Key="SystemAccentColorLight2">#818CF8</Color>
+            <Color x:Key="SystemAccentColorLight3">#A5B4FC</Color>
+            <Color x:Key="SystemAccentColorDark1">#4338CA</Color>
+            <Color x:Key="SystemAccentColorDark2">#3730A3</Color>
+            <Color x:Key="SystemAccentColorDark3">#312E81</Color>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://ExamSystem/Styles/Controls.axaml" />
     </Application.Styles>
 </Application>
