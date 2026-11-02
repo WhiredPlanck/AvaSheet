@@ -37,7 +37,7 @@ public enum ExamPhase
 /// 和平时练习的区别是「先答完整张卷子再判」，所以过程中不显示对错，
 /// 也可以前后翻页修改答案；多选题全对才得分，漏选错选都算 0 分。
 /// </summary>
-public sealed partial class ExamViewModel : PageViewModelBase
+public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 {
     /// <summary>组卷配比：单选 : 多选 : 判断 = 2 : 1 : 1，题库不够时按实际数量抽。</summary>
     private const int TargetSingleChoice = 20;
@@ -129,6 +129,9 @@ public sealed partial class ExamViewModel : PageViewModelBase
     public bool IsRunning => Phase == ExamPhase.Running;
 
     public bool IsFinished => Phase == ExamPhase.Finished;
+
+    /// <summary>作答中隐藏主窗口的顶栏和状态栏。</summary>
+    public bool IsAnswering => Phase == ExamPhase.Running;
 
     /// <summary>题库里各题型各有多少题（设置页提示用）。</summary>
     public string BankSummaryText { get; private set; } = "";
@@ -685,6 +688,7 @@ public sealed partial class ExamViewModel : PageViewModelBase
         OnPropertyChanged(nameof(IsConfig));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(IsFinished));
+        OnPropertyChanged(nameof(IsAnswering));
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(BankSummaryText));
         OnPropertyChanged(nameof(PaperSummary));

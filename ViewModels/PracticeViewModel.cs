@@ -34,7 +34,7 @@ public enum PracticePhase
 /// 错题本存在题库文件的 wrongQuestionIds 里，答对后自动移出，
 /// 所以它表示「当前还没掌握的题」，而不是历史错误次数。
 /// </summary>
-public sealed partial class PracticeViewModel : PageViewModelBase
+public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSession
 {
     private readonly IBankStore? _store;
     private readonly string? _bankId;
@@ -45,6 +45,9 @@ public sealed partial class PracticeViewModel : PageViewModelBase
 
     private readonly HashSet<string> _wrongIds = new(StringComparer.Ordinal);
     private readonly List<Question> _queue = [];
+
+    /// <summary>本轮每道题的判定结果：true = 答对。答题卡据此上色。</summary>
+    private readonly Dictionary<string, bool> _results = new(StringComparer.Ordinal);
 
     private QuestionBank? _bank;
     private int _index;
@@ -79,6 +82,9 @@ public sealed partial class PracticeViewModel : PageViewModelBase
     }
 
     public ObservableCollection<PracticeOptionViewModel> Options { get; } = [];
+
+    /// <summary>右侧答题卡：本轮每道题的位置与对错，只用于展示，不能跳题。</summary>
+    public ObservableCollection<PracticeNavItemViewModel> Navigator { get; } = [];
 
     public override string Title => _wrongBookEntry ? "错题本" : "平时练习";
 
@@ -125,6 +131,9 @@ public sealed partial class PracticeViewModel : PageViewModelBase
     public bool IsRunning => Phase == PracticePhase.Running;
 
     public bool IsFinished => Phase == PracticePhase.Finished;
+
+    /// <summary>作答中隐藏主窗口的顶栏和状态栏。</summary>
+    public bool IsAnswering => Phase == PracticePhase.Running;
 
     // ---------------------------------------------------------------- 当前题目
 
@@ -330,11 +339,35 @@ public sealed partial class PracticeViewModel : PageViewModelBase
         _index = 0;
         CorrectCount = 0;
         WrongCount = 0;
+        _results.Clear();
+        BuildNavigator();
         _startedAt = DateTimeOffset.Now;
         Phase = PracticePhase.Running;
 
         LoadCurrent();
         NotifyAll();
+    }
+
+    private void BuildNavigator()
+    {
+        Navigator.Clear();
+
+        for (var i = 0; i < _queue.Count; i++)
+        {
+            Navigator.Add(new PracticeNavItemViewModel(i + 1));
+        }
+
+        RefreshNavigator();
+    }
+
+    /// <summary>把当前位置和每题判定结果同步到答题卡。</summary>
+    private void RefreshNavigator()
+    {
+        for (var i = 0; i < Navigator.Count && i < _queue.Count; i++)
+        {
+            var hasResult = _results.TryGetValue(_queue[i].Id, out var correct);
+            Navigator[i].Refresh(i == _index, hasResult, hasResult && correct);
+        }
     }
 
     private void LoadCurrent()
@@ -360,6 +393,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase
             }
         }
 
+        RefreshNavigator();
         NotifyAll();
     }
 
@@ -444,7 +478,9 @@ public sealed partial class PracticeViewModel : PageViewModelBase
             _wrongIds.Add(question.Id);
         }
 
+        _results[question.Id] = IsCorrectAnswer;
         _dirty = true;
+        RefreshNavigator();
         NotifyAll();
     }
 
@@ -559,6 +595,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(IsFinished));
+        OnPropertyChanged(nameof(IsAnswering));
         OnPropertyChanged(nameof(BankName));
         OnPropertyChanged(nameof(Current));
         OnPropertyChanged(nameof(Total));
@@ -634,10 +671,50 @@ public sealed partial class PracticeOptionViewModel : ObservableObject
 
     public bool IsWrongPick => IsCorrect == false && IsSelected && _owner.IsAnswered;
 
+    /// <summary>还没判定时，选中的选项右侧显示一个对勾（和考试页一致）。</summary>
+    public bool ShowSelectionMark => IsSelected && !_owner.IsAnswered;
+
     public IRelayCommand SelectCommand { get; }
 
     internal void RefreshState()
     {
         OnPropertyChanged(nameof(IsWrongPick));
+        OnPropertyChanged(nameof(ShowSelectionMark));
+    }
+
+    partial void OnIsSelectedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsWrongPick));
+        OnPropertyChanged(nameof(ShowSelectionMark));
+    }
+}
+
+/// <summary>练习页答题卡上的一个号码，只显示状态，不能点击跳题。</summary>
+public sealed partial class PracticeNavItemViewModel : ObservableObject
+{
+    public PracticeNavItemViewModel(int number)
+    {
+        Number = number;
+    }
+
+    public int Number { get; }
+
+    [ObservableProperty]
+    public partial bool IsCurrent { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAnswered { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsCorrect { get; set; }
+
+    public bool IsWrong => IsAnswered && !IsCorrect;
+
+    internal void Refresh(bool isCurrent, bool isAnswered, bool isCorrect)
+    {
+        IsCurrent = isCurrent;
+        IsAnswered = isAnswered;
+        IsCorrect = isCorrect;
+        OnPropertyChanged(nameof(IsWrong));
     }
 }

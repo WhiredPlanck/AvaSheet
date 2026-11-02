@@ -11,57 +11,34 @@
         <vm:PracticeViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto,Auto,*" Margin="32,22,32,16" RowSpacing="14">
+    <Grid RowDefinitions="Auto,*" Margin="32,22,32,16" RowSpacing="14">
 
-        <!-- 头部 -->
-        <Grid Grid.Row="0" ColumnDefinitions="*">
-            <StackPanel Spacing="8">
-                <Button Theme="{StaticResource LinkButtonTheme}"
-                        Command="{Binding LeaveCommand}"
-                        HorizontalAlignment="Left">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <PathIcon Data="{StaticResource IconBack}" Width="13" Height="13" />
-                        <TextBlock Text="返回首页" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <TextBlock Classes="h1" Text="{Binding Title}" />
-                    <Border Classes="pill" VerticalAlignment="Center">
-                        <TextBlock Classes="pillText" Text="{Binding BankName}" />
-                    </Border>
-                    <Border Classes="pill" VerticalAlignment="Center" IsVisible="{Binding IsWrongOnly}">
-                        <TextBlock Classes="pillText" Text="{Binding RoundModeText}" />
-                    </Border>
+        <!-- 头部：作答中隐藏，页面上不再显示「当前处于什么模式」 -->
+        <StackPanel Grid.Row="0" Spacing="8" IsVisible="{Binding !IsRunning}">
+            <Button Theme="{StaticResource LinkButtonTheme}"
+                    Command="{Binding LeaveCommand}"
+                    HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Data="{StaticResource IconBack}" Width="13" Height="13" />
+                    <TextBlock Text="返回首页" VerticalAlignment="Center" />
                 </StackPanel>
+            </Button>
 
-                <TextBlock Classes="small" Text="{Binding Description}" />
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Classes="h1" Text="{Binding Title}" />
+                <Border Classes="pill" VerticalAlignment="Center">
+                    <TextBlock Classes="pillText" Text="{Binding BankName}" />
+                </Border>
+                <Border Classes="pill" VerticalAlignment="Center" IsVisible="{Binding IsWrongOnly}">
+                    <TextBlock Classes="pillText" Text="{Binding RoundModeText}" />
+                </Border>
             </StackPanel>
-        </Grid>
 
-        <!-- 进度 -->
-        <Grid Grid.Row="1"
-              ColumnDefinitions="*,Auto"
-              ColumnSpacing="16"
-              IsVisible="{Binding IsRunning}">
-            <ProgressBar Grid.Column="0"
-                         Classes="practice"
-                         Minimum="0"
-                         Maximum="1"
-                         Value="{Binding Progress}" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16">
-                <TextBlock Classes="small" Text="{Binding ScoreText}" VerticalAlignment="Center" />
-                <TextBlock Classes="small" Text="{Binding ProgressText}" VerticalAlignment="Center" />
-                <Button Theme="{StaticResource LinkButtonTheme}"
-                        VerticalAlignment="Center"
-                        Command="{Binding FinishEarlyCommand}">
-                    <TextBlock Text="结束练习" />
-                </Button>
-            </StackPanel>
-        </Grid>
+            <TextBlock Classes="small" Text="{Binding Description}" />
+        </StackPanel>
 
         <!-- 内容 -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="1">
 
             <!-- 加载中 -->
             <TextBlock Classes="muted"
@@ -100,129 +77,216 @@
                 </StackPanel>
             </Border>
 
-            <!-- 作答中：题目卡片滚动，底部导航固定 -->
-            <Grid MaxWidth="860"
-                  HorizontalAlignment="Stretch"
-                  RowDefinitions="*,Auto"
+            <!-- 作答中：沉浸式，布局与模拟考试一致；没有倒计时和交卷 -->
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="12"
                   IsVisible="{Binding IsRunning}">
 
-                <ScrollViewer Grid.Row="0"
-                              HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                    <Border Classes="formPanel" Padding="22" Margin="0,0,12,0" VerticalAlignment="Top">
-                        <StackPanel Spacing="6">
+                <!-- 作答页自己的细顶栏：退出 + 题库信息 -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                    <Button Grid.Column="0"
+                            Theme="{StaticResource LinkButtonTheme}"
+                            Command="{Binding LeaveCommand}"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource IconBack}" Width="13" Height="13" />
+                            <TextBlock Text="返回首页" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
 
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Classes="typeBadge">
-                                    <TextBlock Classes="typeBadgeText" Text="{Binding TypeShort}" />
-                                </Border>
-                                <TextBlock Classes="small"
-                                           Text="{Binding DifficultyStars}"
-                                           Foreground="{DynamicResource AccentBrush}"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Classes="small"
-                                           Text="{Binding TagsText}"
-                                           IsVisible="{Binding HasTags}"
-                                           VerticalAlignment="Center" />
-                            </StackPanel>
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                        <Border Classes="pill">
+                            <TextBlock Classes="pillText" Text="{Binding BankName}" />
+                        </Border>
+                        <Border Classes="pill" IsVisible="{Binding IsWrongOnly}">
+                            <TextBlock Classes="pillText" Text="{Binding RoundModeText}" />
+                        </Border>
+                    </StackPanel>
+                </Grid>
 
-                            <TextBlock Text="{Binding Stem}"
-                                       TextWrapping="Wrap"
-                                       FontSize="17"
-                                       LineHeight="26"
-                                       Foreground="{DynamicResource AppForegroundBrush}"
-                                       Margin="0,8,0,2" />
+                <Grid Grid.Row="1" ColumnDefinitions="*,240" ColumnSpacing="16">
 
-                            <ItemsControl ItemsSource="{Binding Options}" Margin="0,10,0,0">
+                    <!-- 左：题目卡片铺满，内部滚动，底部导航固定 -->
+                    <Border Grid.Column="0" Classes="formPanel" Padding="22">
+                        <Grid RowDefinitions="*,Auto">
+                        <ScrollViewer Grid.Row="0"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="6">
+
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <Border Classes="typeBadge">
+                                            <TextBlock Classes="typeBadgeText" Text="{Binding TypeShort}" />
+                                        </Border>
+                                        <TextBlock Classes="small"
+                                                   Text="{Binding DifficultyStars}"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock Classes="small"
+                                                   Text="{Binding TagsText}"
+                                                   IsVisible="{Binding HasTags}"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding Stem}"
+                                               TextWrapping="Wrap"
+                                               FontSize="17"
+                                               LineHeight="26"
+                                               Foreground="{DynamicResource AppForegroundBrush}"
+                                               Margin="0,8,0,2" />
+
+                                    <ItemsControl ItemsSource="{Binding Options}" Margin="0,10,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:PracticeOptionViewModel">
+                                                <Button Classes="optionRow"
+                                                        Classes.selected="{Binding IsSelected}"
+                                                        Classes.correct="{Binding IsCorrect}"
+                                                        Classes.wrong="{Binding IsWrongPick}"
+                                                        Command="{Binding SelectCommand}">
+                                                    <DockPanel>
+                                                        <Border DockPanel.Dock="Left"
+                                                                Classes="optionKey"
+                                                                Margin="0,0,12,0"
+                                                                IsVisible="{Binding HasKey}">
+                                                            <TextBlock Classes="optionKeyText" Text="{Binding KeyText}" />
+                                                        </Border>
+                                                        <TextBlock DockPanel.Dock="Right"
+                                                                   Text="✓"
+                                                                   FontSize="15"
+                                                                   FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource AccentBrush}"
+                                                                   IsVisible="{Binding ShowSelectionMark}" />
+                                                        <TextBlock DockPanel.Dock="Right"
+                                                                   Text="✓"
+                                                                   FontSize="15"
+                                                                   FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource SuccessBrush}"
+                                                                   IsVisible="{Binding IsCorrect}" />
+                                                        <TextBlock DockPanel.Dock="Right"
+                                                                   Text="✗"
+                                                                   FontSize="15"
+                                                                   FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,0,12,0"
+                                                                   Foreground="{DynamicResource DangerBrush}"
+                                                                   IsVisible="{Binding IsWrongPick}" />
+                                                        <TextBlock Classes="optionText"
+                                                                   Text="{Binding Text}"
+                                                                   VerticalAlignment="Center" />
+                                                    </DockPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Classes="small"
+                                               Text="多选题请把所有正确选项都选上。"
+                                               Margin="0,6,0,0"
+                                               IsVisible="{Binding IsMultiple}" />
+
+                                    <Button Classes="accent"
+                                            Content="提交答案"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,4,0,0"
+                                            Command="{Binding SubmitAnswerCommand}"
+                                            IsEnabled="{Binding CanSubmit}"
+                                            IsVisible="{Binding ShowSubmit}" />
+
+                                    <!-- 判定结果 -->
+                                    <Border x:Name="ResultBanner"
+                                            Classes="resultBanner"
+                                            Classes.ok="{Binding IsCorrectAnswer}"
+                                            Classes.bad="{Binding !IsCorrectAnswer}"
+                                            Margin="0,12,0,0"
+                                            IsVisible="{Binding HasResult}">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="resultTitle"
+                                                       Classes.ok="{Binding IsCorrectAnswer}"
+                                                       Classes.bad="{Binding !IsCorrectAnswer}"
+                                                       Text="{Binding ResultTitle}" />
+                                            <TextBlock Classes="muted" Text="{Binding ResultDetail}" TextWrapping="Wrap" />
+                                            <TextBlock Classes="muted"
+                                                       Text="{Binding ExplanationDisplay}"
+                                                       IsVisible="{Binding HasExplanation}"
+                                                       TextWrapping="Wrap"
+                                                       LineHeight="20"
+                                                       Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Classes="notice"
+                                            Margin="0,12,0,0"
+                                            IsVisible="{Binding HasError}">
+                                        <TextBlock Classes="noticeText" Text="{Binding ErrorMessage}" />
+                                    </Border>
+                                </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- 底部导航：固定可见，长题目滚动时也能直接翻页 -->
+                        <Grid Grid.Row="1"
+                              ColumnDefinitions="*,Auto"
+                              Margin="0,12,0,0">
+                            <TextBlock Classes="small"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding ProgressText}" />
+                            <Button Grid.Column="1"
+                                    Classes="accent"
+                                    Content="{Binding NextButtonText}"
+                                    Command="{Binding NextCommand}"
+                                    IsVisible="{Binding HasResult}" />
+                        </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- 右：本轮战绩 + 答题卡 + 结束练习 -->
+                    <Border Grid.Column="1" Classes="formPanel" Padding="16" VerticalAlignment="Top">
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="small" Text="本轮" />
+                            <TextBlock Classes="countdown" Text="{Binding ScoreText}" />
+
+                            <Border Height="1"
+                                    Background="{DynamicResource DividerBrush}"
+                                    Margin="0,8" />
+
+                            <TextBlock Classes="small" Text="答题卡" />
+                            <ItemsControl ItemsSource="{Binding Navigator}" Margin="0,2,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:PracticeOptionViewModel">
-                                        <Button Classes="optionRow"
-                                                Classes.selected="{Binding IsSelected}"
-                                                Classes.correct="{Binding IsCorrect}"
-                                                Classes.wrong="{Binding IsWrongPick}"
-                                                Command="{Binding SelectCommand}">
-                                            <DockPanel>
-                                                <Border DockPanel.Dock="Left"
-                                                        Classes="optionKey"
-                                                        Margin="0,0,12,0"
-                                                        IsVisible="{Binding HasKey}">
-                                                    <TextBlock Classes="optionKeyText" Text="{Binding KeyText}" />
-                                                </Border>
-                                                <TextBlock DockPanel.Dock="Right"
-                                                           Text="✓"
-                                                           FontSize="15"
-                                                           FontWeight="SemiBold"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource SuccessBrush}"
-                                                           IsVisible="{Binding IsCorrect}" />
-                                                <TextBlock DockPanel.Dock="Right"
-                                                           Text="✗"
-                                                           FontSize="15"
-                                                           FontWeight="SemiBold"
-                                                           VerticalAlignment="Center"
-                                                           Margin="0,0,12,0"
-                                                           Foreground="{DynamicResource DangerBrush}"
-                                                           IsVisible="{Binding IsWrongPick}" />
-                                                <TextBlock Classes="optionText"
-                                                           Text="{Binding Text}"
-                                                           VerticalAlignment="Center" />
-                                            </DockPanel>
-                                        </Button>
+                                    <DataTemplate x:DataType="vm:PracticeNavItemViewModel">
+                                        <Button Classes="navChip"
+                                                Classes.current="{Binding IsCurrent}"
+                                                Classes.answered="{Binding IsAnswered}"
+                                                Classes.ok="{Binding IsCorrect}"
+                                                Classes.bad="{Binding IsWrong}"
+                                                Content="{Binding Number}"
+                                                IsHitTestVisible="False"
+                                                Focusable="False" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
+                            <TextBlock Classes="small" Text="{Binding ProgressText}" Margin="0,4,0,0" />
+
+                            <Border Height="1"
+                                    Background="{DynamicResource DividerBrush}"
+                                    Margin="0,8" />
+
                             <Button Classes="accent"
-                                    Content="提交答案"
-                                    HorizontalAlignment="Left"
-                                    Margin="0,4,0,0"
-                                    Command="{Binding SubmitAnswerCommand}"
-                                    IsEnabled="{Binding CanSubmit}"
-                                    IsVisible="{Binding ShowSubmit}" />
-
-                            <!-- 判定结果 -->
-                            <Border x:Name="ResultBanner"
-                                    Classes="resultBanner"
-                                    Classes.ok="{Binding IsCorrectAnswer}"
-                                    Classes.bad="{Binding !IsCorrectAnswer}"
-                                    Margin="0,12,0,0"
-                                    IsVisible="{Binding HasResult}">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Classes="resultTitle"
-                                               Classes.ok="{Binding IsCorrectAnswer}"
-                                               Classes.bad="{Binding !IsCorrectAnswer}"
-                                               Text="{Binding ResultTitle}" />
-                                    <TextBlock Classes="muted" Text="{Binding ResultDetail}" TextWrapping="Wrap" />
-                                    <TextBlock Classes="muted"
-                                               Text="{Binding ExplanationDisplay}"
-                                               IsVisible="{Binding HasExplanation}"
-                                               TextWrapping="Wrap"
-                                               LineHeight="20"
-                                               Margin="0,4,0,0" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Classes="notice"
-                                    Margin="0,12,0,0"
-                                    IsVisible="{Binding HasError}">
-                                <TextBlock Classes="noticeText" Text="{Binding ErrorMessage}" />
-                            </Border>
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Content="结束练习"
+                                    Command="{Binding FinishEarlyCommand}" />
                         </StackPanel>
                     </Border>
-                </ScrollViewer>
-
-                <!-- 底部导航：固定可见，长题目滚动时也能直接翻页 -->
-                <Grid Grid.Row="1"
-                      ColumnDefinitions="*,Auto"
-                      Margin="0,12,12,0">
-                    <TextBlock Classes="small"
-                               VerticalAlignment="Center"
-                               Text="{Binding ProgressText}" />
-                    <Button Grid.Column="1"
-                            Classes="accent"
-                            Content="{Binding NextButtonText}"
-                            Command="{Binding NextCommand}"
-                            IsVisible="{Binding HasResult}" />
                 </Grid>
             </Grid>
 

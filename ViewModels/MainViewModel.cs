@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -70,6 +71,18 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial string StatusText { get; set; } = "就绪";
 
+    private bool _isImmersive;
+
+    /// <summary>
+    /// 正在答题（模拟考试/平时练习/错题本）时为 true：
+    /// 主窗口收起顶栏和状态栏，页面上也不再显示「当前是什么模式」。
+    /// </summary>
+    public bool IsImmersive
+    {
+        get => _isImmersive;
+        private set => SetProperty(ref _isImmersive, value);
+    }
+
     /// <summary>状态栏右侧：当前题库、题量与错题数。</summary>
     public string BankStatusText => SelectedBank switch
     {
@@ -79,6 +92,35 @@ public partial class MainViewModel : ViewModelBase
     };
 
     public bool StartMaximized { get; private set; }
+
+    // ---------------------------------------------------------------- 沉浸式作答
+
+    partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnPagePropertyChanged;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.PropertyChanged += OnPagePropertyChanged;
+        }
+
+        UpdateImmersive();
+    }
+
+    private void OnPagePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // 页面在 Running 与其它阶段之间切换时，外壳跟着收起或展开。
+        if (e.PropertyName == "Phase")
+        {
+            UpdateImmersive();
+        }
+    }
+
+    private void UpdateImmersive()
+        => IsImmersive = CurrentPage is IAnsweringSession { IsAnswering: true };
 
     // ---------------------------------------------------------------- 启动 / 持久化
 

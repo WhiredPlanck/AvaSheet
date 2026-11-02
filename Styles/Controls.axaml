@@ -390,6 +390,21 @@
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
+    <!-- 练习页答题卡：已判定的题上色 -->
+    <Style Selector="Button.navChip.ok">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="Button.navChip.bad">
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
     <!-- 模拟考试：成绩页的逐题回顾 -->
     <Style Selector="Border.reviewRow">
         <Setter Property="Padding" Value="14,12" />

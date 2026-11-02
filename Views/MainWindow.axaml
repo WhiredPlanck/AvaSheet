@@ -25,7 +25,7 @@
     <DockPanel LastChildFill="True">
 
         <!-- ============ 顶栏 ============ -->
-        <Border DockPanel.Dock="Top" Classes="topbar">
+        <Border DockPanel.Dock="Top" Classes="topbar" IsVisible="{Binding !IsImmersive}">
             <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="20,0">
 
                 <Border Grid.Column="0"
@@ -86,7 +86,7 @@
         </Border>
 
         <!-- ============ 状态栏 ============ -->
-        <Border DockPanel.Dock="Bottom" Classes="statusbar">
+        <Border DockPanel.Dock="Bottom" Classes="statusbar" IsVisible="{Binding !IsImmersive}">
             <Grid ColumnDefinitions="*,Auto" Margin="20,0">
                 <TextBlock Text="{Binding StatusText}"
                            Classes="small"
