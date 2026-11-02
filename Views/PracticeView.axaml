@@ -79,17 +79,24 @@
                 <StackPanel Spacing="10"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                    <TextBlock Classes="cardTitle" Text="这里还没有可以练习的题目" HorizontalAlignment="Center" />
+                    <TextBlock Classes="cardTitle" Text="{Binding EmptyTitle}" HorizontalAlignment="Center" />
                     <TextBlock Classes="muted"
-                               Text="先在顶栏选一个有题目的题库，或者去「管理题目」里添加几道。"
+                               Text="{Binding EmptyHint}"
                                TextWrapping="Wrap"
                                TextAlignment="Center"
                                MaxWidth="420" />
-                    <Button Classes="accent"
-                            Content="返回首页"
-                            HorizontalAlignment="Center"
-                            Margin="0,8,0,0"
-                            Command="{Binding LeaveCommand}" />
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10"
+                                HorizontalAlignment="Center"
+                                Margin="0,8,0,0">
+                        <Button Classes="accent"
+                                Content="去平时练习"
+                                Command="{Binding OpenPracticeCommand}"
+                                IsVisible="{Binding ShowPracticeShortcut}" />
+                        <Button Classes.accent="{Binding !ShowPracticeShortcut}"
+                                Content="返回首页"
+                                Command="{Binding LeaveCommand}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -254,11 +261,11 @@
                                         HorizontalAlignment="Center"
                                         Margin="0,12,0,0">
                                 <Button Classes="accent"
-                                        Content="再练一轮"
+                                        Content="{Binding RestartButtonText}"
                                         Command="{Binding RestartCommand}" />
                                 <Button Content="{Binding WrongOnlyButtonText}"
                                         Command="{Binding PracticeWrongOnlyCommand}"
-                                        IsVisible="{Binding HasWrongBook}" />
+                                        IsVisible="{Binding ShowWrongOnlyButton}" />
                                 <Button Theme="{StaticResource LinkButtonTheme}"
                                         Content="返回首页"
                                         Command="{Binding LeaveCommand}" />

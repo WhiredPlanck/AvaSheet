@@ -16,6 +16,7 @@ public enum PageKind
 {
     Exam,
     Practice,
+    WrongBook,
     Questions,
 }
 
@@ -45,7 +46,7 @@ public partial class MainViewModel : ViewModelBase
         _settingsStore = settingsStore;
         _dialogs = dialogs;
 
-        Home = new HomeViewModel(Navigate);
+        Home = new HomeViewModel(Navigate, () => SelectedBank);
         CurrentPage = Home;
     }
 
@@ -115,6 +116,7 @@ public partial class MainViewModel : ViewModelBase
                 ? Banks.FirstOrDefault()
                 : Banks.FirstOrDefault(x => x.Id == target) ?? Banks.FirstOrDefault();
             _suspendSettingsSave = false;
+            Home.RefreshBankInfo();
         }
         catch (Exception ex)
         {
@@ -140,6 +142,13 @@ public partial class MainViewModel : ViewModelBase
                 SelectedBank?.Id,
                 SelectedBank?.Name,
                 GoHome),
+            PageKind.WrongBook => new PracticeViewModel(
+                _store,
+                SelectedBank?.Id,
+                SelectedBank?.Name,
+                GoHome,
+                startWrongOnly: true,
+                openPractice: () => Navigate(PageKind.Practice)),
             PageKind.Questions => new QuestionManageViewModel(
                 _store,
                 _dialogs,
@@ -194,6 +203,7 @@ public partial class MainViewModel : ViewModelBase
     partial void OnSelectedBankChanged(BankSummary? value)
     {
         OnPropertyChanged(nameof(BankStatusText));
+        Home.RefreshBankInfo();
 
         if (!_initialized || _suspendSettingsSave)
         {

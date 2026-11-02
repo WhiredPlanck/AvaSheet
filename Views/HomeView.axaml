@@ -20,10 +20,10 @@
             </StackPanel>
 
             <Grid Grid.Row="1"
-                  ColumnDefinitions="*,*,*"
-                  ColumnSpacing="18"
+                  ColumnDefinitions="*,*,*,*"
+                  ColumnSpacing="16"
                   Margin="0,28,0,0"
-                  Height="220"
+                  Height="216"
                   VerticalAlignment="Top">
 
                 <!-- 模拟考试 -->
@@ -70,8 +70,30 @@
                     </Grid>
                 </Button>
 
-                <!-- 管理题目 -->
+                <!-- 错题本 -->
                 <Button Grid.Column="2"
+                        Theme="{StaticResource CardButtonTheme}"
+                        Command="{Binding OpenWrongBookCommand}">
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <Border Grid.Row="0" Classes="iconTile" HorizontalAlignment="Left">
+                            <PathIcon Data="{StaticResource IconBook}"
+                                      Width="22" Height="22"
+                                      Foreground="{DynamicResource AccentBrush}" />
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Spacing="7" Margin="0,16,0,0">
+                            <TextBlock Classes="cardTitle" Text="错题本" />
+                            <TextBlock Classes="muted"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding WrongBookHint}" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2" Classes="cardAction" Text="刷错题 →" />
+                    </Grid>
+                </Button>
+
+                <!-- 管理题目 -->
+                <Button Grid.Column="3"
                         Theme="{StaticResource CardButtonTheme}"
                         Command="{Binding OpenQuestionsCommand}">
                     <Grid RowDefinitions="Auto,*,Auto">

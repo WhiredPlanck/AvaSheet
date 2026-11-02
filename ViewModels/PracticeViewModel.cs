@@ -40,6 +40,8 @@ public sealed partial class PracticeViewModel : PageViewModelBase
     private readonly string? _bankId;
     private readonly string? _initialBankName;
     private readonly Action? _goBack;
+    private readonly Action? _openPractice;
+    private readonly bool _wrongBookEntry;
 
     private readonly HashSet<string> _wrongIds = new(StringComparer.Ordinal);
     private readonly List<Question> _queue = [];
@@ -61,27 +63,38 @@ public sealed partial class PracticeViewModel : PageViewModelBase
         IBankStore store,
         string? bankId,
         string? bankName,
-        Action? goBack = null)
+        Action? goBack = null,
+        bool startWrongOnly = false,
+        Action? openPractice = null)
         : base(goBack)
     {
         _store = store;
         _bankId = bankId;
         _initialBankName = bankName;
         _goBack = goBack;
+        _wrongBookEntry = startWrongOnly;
+        _openPractice = openPractice;
 
         LeaveCommand = new AsyncRelayCommand(LeaveAsync);
     }
 
     public ObservableCollection<PracticeOptionViewModel> Options { get; } = [];
 
-    public override string Title => "平时练习";
+    public override string Title => _wrongBookEntry ? "错题本" : "平时练习";
 
-    public override string Description => Phase switch
-    {
-        PracticePhase.Empty => "当前题库还没有题目，先去「管理题目」添加几道。",
-        PracticePhase.Finished => "这一轮做完了，看看哪些还没掌握。",
-        _ => "逐题作答、即时判定，做错的题会自动进错题本。",
-    };
+    public override string Description => _wrongBookEntry
+        ? Phase switch
+        {
+            PracticePhase.Empty => "错题本还没有题目，去平时练习做一轮，错的题会自动收进来。",
+            PracticePhase.Finished => "这一轮错题做完了，答对的题已经移出错题本。",
+            _ => "只练做错的题，答对后自动移出错题本。",
+        }
+        : Phase switch
+        {
+            PracticePhase.Empty => "当前题库还没有题目，先去「管理题目」添加几道。",
+            PracticePhase.Finished => "这一轮做完了，看看哪些还没掌握。",
+            _ => "逐题作答、即时判定，做错的题会自动进错题本。",
+        };
 
     public string BankName => _bank?.Name ?? _initialBankName ?? "未选择题库";
 
@@ -224,7 +237,27 @@ public sealed partial class PracticeViewModel : PageViewModelBase
 
     public string WrongOnlyButtonText => $"只练错题（{WrongBookCount}）";
 
+    /// <summary>已经在错题模式里时，不再重复显示「只练错题」。</summary>
+    public bool ShowWrongOnlyButton => HasWrongBook && !IsWrongOnly;
+
+    public string RestartButtonText => _wrongBookEntry ? "再练错题" : "再练一轮";
+
+    /// <summary>空状态文案随入口变化。</summary>
+    public string EmptyTitle => _wrongBookEntry && _bank is not null
+        ? "错题本还是空的"
+        : "这里还没有可以练习的题目";
+
+    public string EmptyHint => _wrongBookEntry && _bank is not null
+        ? "平时练习里做错的题会自动收进来，答对之后又会自动移出。"
+        : "先在顶栏选一个有题目的题库，或者去「管理题目」里添加几道。";
+
+    /// <summary>错题本为空时给一个去平时练习的快捷入口。</summary>
+    public bool ShowPracticeShortcut => _wrongBookEntry && _bank is not null;
+
     public IAsyncRelayCommand LeaveCommand { get; }
+
+    [RelayCommand]
+    private void OpenPractice() => _openPractice?.Invoke();
 
     // ---------------------------------------------------------------- 加载
 
@@ -266,7 +299,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase
         _wrongIds.UnionWith(_bank.WrongQuestionIds);
         _wrongIds.RemoveWhere(id => _bank.Questions.All(q => q.Id != id));
 
-        StartRound(wrongOnly: false);
+        StartRound(wrongOnly: _wrongBookEntry);
     }
 
     /// <summary>开始一轮：题库全部题目，或者只练错题，顺序都随机打乱。</summary>
@@ -286,7 +319,8 @@ public sealed partial class PracticeViewModel : PageViewModelBase
 
         if (_queue.Count == 0)
         {
-            ErrorMessage = "错题本是空的，先做一轮完整练习吧。";
+            // 从「错题本」卡片进来时，空状态面板本身已经说明情况，不用再报错。
+            ErrorMessage = _wrongBookEntry ? null : "错题本是空的，先做一轮完整练习吧。";
             Phase = PracticePhase.Empty;
             NotifyAll();
             return;
@@ -448,7 +482,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase
     }
 
     [RelayCommand]
-    private void Restart() => StartRound(wrongOnly: false);
+    private void Restart() => StartRound(wrongOnly: _wrongBookEntry);
 
     [RelayCommand]
     private void PracticeWrongOnly()
@@ -516,6 +550,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase
         OnPropertyChanged(nameof(HasWrongBook));
         OnPropertyChanged(nameof(WrongBookText));
         OnPropertyChanged(nameof(WrongOnlyButtonText));
+        OnPropertyChanged(nameof(ShowWrongOnlyButton));
     }
 
     private void NotifyAll()
@@ -550,6 +585,11 @@ public sealed partial class PracticeViewModel : PageViewModelBase
         OnPropertyChanged(nameof(IsWrongOnly));
         OnPropertyChanged(nameof(ElapsedText));
         OnPropertyChanged(nameof(Description));
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(EmptyTitle));
+        OnPropertyChanged(nameof(EmptyHint));
+        OnPropertyChanged(nameof(ShowPracticeShortcut));
+        OnPropertyChanged(nameof(RestartButtonText));
         NotifyStats();
     }
 
