@@ -29,9 +29,10 @@ public partial class App : Application
         {
             var store = new BankStore();
             var settingsStore = new AppSettingsStore();
+            var recordStore = new ExamRecordStore();
             var window = new MainWindow();
 
-            window.DataContext = new MainViewModel(store, settingsStore, new DialogService(window));
+            window.DataContext = new MainViewModel(store, settingsStore, new DialogService(window), recordStore);
             desktop.MainWindow = window;
         }
 

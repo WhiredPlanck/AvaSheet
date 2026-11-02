@@ -125,6 +125,31 @@
         <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     </Style>
 
+    <!-- 小标签：需要留意的情况（超时交卷、有未答题） -->
+    <Style Selector="Border.pillWarn">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="7,2" />
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.pillWarnText">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+
+    <!-- 汇总数字 -->
+    <Style Selector="TextBlock.statLabel">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.statValue">
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}" />
+    </Style>
+
     <!-- ============ 表单 ============ -->
     <Style Selector="TextBlock.fieldLabel">
         <Setter Property="FontSize" Value="12" />

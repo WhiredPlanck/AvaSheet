@@ -45,6 +45,7 @@ public sealed partial class ExamViewModel : PageViewModelBase
     private const int TargetTrueFalse = 10;
 
     private readonly IBankStore? _store;
+    private readonly IExamRecordStore? _records;
     private readonly string? _bankId;
     private readonly string? _initialBankName;
     private readonly IDialogService? _dialogs;
@@ -68,7 +69,8 @@ public sealed partial class ExamViewModel : PageViewModelBase
         string? bankId,
         string? bankName,
         IDialogService? dialogs,
-        Action? goBack = null)
+        Action? goBack = null,
+        IExamRecordStore? records = null)
         : base(goBack)
     {
         _store = store;
@@ -76,6 +78,7 @@ public sealed partial class ExamViewModel : PageViewModelBase
         _initialBankName = bankName;
         _dialogs = dialogs;
         _goBack = goBack;
+        _records = records;
 
         LeaveCommand = new AsyncRelayCommand(LeaveAsync);
     }
@@ -508,8 +511,55 @@ public sealed partial class ExamViewModel : PageViewModelBase
             ErrorMessage = null;
         }
 
+        if (_records is not null)
+        {
+            try
+            {
+                await _records.SaveAsync(BuildRecord(autoSubmitted, elapsed));
+            }
+            catch (Exception ex)
+            {
+                // 记录写失败不影响看成绩，只在顶部提示一句。
+                ErrorMessage = "成绩没能保存到考试记录：" + ex.Message;
+            }
+        }
+
         Phase = ExamPhase.Finished;
         NotifyAll();
+    }
+
+    /// <summary>把这一份卷子的成绩与逐题作答整理成一条记录。</summary>
+    private ExamRecord BuildRecord(bool autoSubmitted, TimeSpan elapsed)
+    {
+        return new ExamRecord
+        {
+            Id = "exam_" + Guid.NewGuid().ToString("N")[..12],
+            BankId = _bankId,
+            BankName = BankName,
+            StartedAt = _startedAt,
+            FinishedAt = DateTimeOffset.Now,
+            ElapsedSeconds = Math.Max(0, (int)Math.Round(elapsed.TotalSeconds)),
+            LimitMinutes = Math.Clamp(LimitMinutes, 1, 600),
+            AutoSubmitted = autoSubmitted,
+            Score = Score,
+            Total = Questions.Count,
+            CorrectCount = Questions.Count(q => q.IsCorrect),
+            WrongCount = Questions.Count(q => q.IsAnswered && !q.IsCorrect),
+            UnansweredCount = Questions.Count(q => !q.IsAnswered),
+            Answers = [.. Questions.Select(q => new ExamRecordAnswer
+            {
+                QuestionId = q.Question.Id,
+                Type = q.Question.Type,
+                Stem = q.Question.Stem,
+                Selected = [.. q.Options.Where(o => o.IsSelected).Select(o => o.Key)],
+                Correct = [.. q.Options
+                    .Where(o => q.Question.Answers.Contains(o.Key, StringComparer.OrdinalIgnoreCase))
+                    .Select(o => o.Key)],
+                IsAnswered = q.IsAnswered,
+                IsCorrect = q.IsCorrect,
+                Explanation = q.Question.Explanation,
+            })],
+        };
     }
 
     // ---------------------------------------------------------------- 退出

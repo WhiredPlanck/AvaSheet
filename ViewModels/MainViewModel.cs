@@ -18,6 +18,7 @@ public enum PageKind
     Practice,
     WrongBook,
     Questions,
+    Records,
 }
 
 /// <summary>
@@ -29,6 +30,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly IBankStore _store;
     private readonly AppSettingsStore _settingsStore;
     private readonly IDialogService? _dialogs;
+    private readonly IExamRecordStore _recordStore;
 
     private AppSettings _settings = new();
     private bool _initialized;
@@ -40,11 +42,16 @@ public partial class MainViewModel : ViewModelBase
     {
     }
 
-    public MainViewModel(IBankStore store, AppSettingsStore settingsStore, IDialogService? dialogs)
+    public MainViewModel(
+        IBankStore store,
+        AppSettingsStore settingsStore,
+        IDialogService? dialogs,
+        IExamRecordStore? recordStore = null)
     {
         _store = store;
         _settingsStore = settingsStore;
         _dialogs = dialogs;
+        _recordStore = recordStore ?? new ExamRecordStore();
 
         Home = new HomeViewModel(Navigate, () => SelectedBank);
         CurrentPage = Home;
@@ -82,6 +89,7 @@ public partial class MainViewModel : ViewModelBase
 
         await ReloadBanksAsync(_settings.LastBankId);
         _initialized = true;
+        await RefreshRecordInfoAsync();
 
         // 首次启动（或上次选中的库已被删）时，把实际选中的库记下来。
         if (_settings.LastBankId != SelectedBank?.Id)
@@ -125,6 +133,21 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>把考试记录的条数与最近一次成绩同步到首页卡片。</summary>
+    private async Task RefreshRecordInfoAsync()
+    {
+        try
+        {
+            var records = await _recordStore.ListAsync();
+            var last = records.FirstOrDefault();
+            Home.RefreshRecordInfo(records.Count, last?.Score, last?.Total);
+        }
+        catch (Exception)
+        {
+            Home.RefreshRecordInfo(0, null, null);
+        }
+    }
+
     // ---------------------------------------------------------------- 导航
 
     private void Navigate(PageKind kind)
@@ -136,7 +159,8 @@ public partial class MainViewModel : ViewModelBase
                 SelectedBank?.Id,
                 SelectedBank?.Name,
                 _dialogs,
-                GoHome),
+                GoHome,
+                _recordStore),
             PageKind.Practice => new PracticeViewModel(
                 _store,
                 SelectedBank?.Id,
@@ -155,6 +179,11 @@ public partial class MainViewModel : ViewModelBase
                 SelectedBank?.Id,
                 SelectedBank?.Name,
                 GoHome),
+            PageKind.Records => new ExamRecordsViewModel(
+                _recordStore,
+                _dialogs,
+                GoHome,
+                () => Navigate(PageKind.Exam)),
             _ => Home,
         };
 
@@ -169,6 +198,7 @@ public partial class MainViewModel : ViewModelBase
 
         // 从题目页回来时题量可能变了，顺便刷新顶栏和状态栏。
         _ = ReloadBanksAsync(SelectedBank?.Id);
+        _ = RefreshRecordInfoAsync();
     }
 
     [RelayCommand]

@@ -20,6 +20,8 @@ namespace ExamSystem.Services;
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(Question))]
 [JsonSerializable(typeof(List<Question>))]
+[JsonSerializable(typeof(ExamRecord))]
+[JsonSerializable(typeof(List<ExamRecord>))]
 internal sealed partial class JsonContext : JsonSerializerContext
 {
     /// <summary>

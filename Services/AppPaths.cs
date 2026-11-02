@@ -20,6 +20,9 @@ public static class AppPaths
     /// <summary>偏好设置文件。</summary>
     public static string SettingsFile { get; } = Path.Combine(RootDirectory, "settings.json");
 
+    /// <summary>考试记录文件。</summary>
+    public static string RecordsFile { get; } = Path.Combine(RootDirectory, "records.json");
+
     public static void EnsureCreated()
     {
         Directory.CreateDirectory(BanksDirectory);
