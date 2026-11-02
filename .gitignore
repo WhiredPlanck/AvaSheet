@@ -1,0 +1,70 @@
+# ===== 构建产物 =====
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.publishsettings
+*.binlog
+
+# ===== IDE / 编辑器 =====
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.code-workspace
+# 注意：*.sln / *.slnx / *.csproj 是项目文件，必须提交，不要加入忽略。
+
+# ===== .NET 中间文件 =====
+*.pidb
+*.svclog
+*.tlog
+*.sbr
+*.tlh
+*.ilk
+*.exp
+*.cache
+packages/
+project.lock.json
+project.fragment.lock.json
+# 注意：不要把 *.exe / *.dll 写死忽略，
+# 以后若把第三方原生库（如 libSkiaSharp）放进仓库会被误伤。
+
+# ===== 测试与覆盖率 =====
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+TestResult.xml
+
+# ===== 运行时生成 =====
+*.runtimeconfig.dev.json
+*.dbmdl
+
+# ===== 签名与本地机密 =====
+*.snk
+*.pfx
+*.p12
+.env
+appsettings.*.local.json
+
+# ===== 系统杂项 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.*~
+*.orig
+*.rej
