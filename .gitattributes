@@ -1,0 +1,9 @@
+# 统一换行符：仓库里始终以 LF 存储，检出的工作区也是 LF。
+# 避免 Windows 编辑器写入 CRLF 后，整个文件在 diff 里显示为改动。
+* text=auto eol=lf
+
+# 二进制资源不做换行符转换。
+*.ico binary
+*.png binary
+*.jpg binary
+*.webp binary
