@@ -151,6 +151,12 @@
     </Style>
 
     <!-- ============ 表单 ============ -->
+    <!-- Fluent 的按钮内容默认左对齐（来自 ContentControl），统一改成居中；卡片按钮自己撑满 -->
+    <Style Selector="Button:not(.card)">
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
     <Style Selector="TextBlock.fieldLabel">
         <Setter Property="FontSize" Value="12" />
         <Setter Property="FontWeight" Value="SemiBold" />
@@ -187,6 +193,28 @@
         <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- 并列的次要操作按钮：同一色调，避免一灰一蓝 -->
+    <Style Selector="Button.choice">
+        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadiusSmall}" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="Button.choice:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Button.choice:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
 
     <!-- 破坏性主按钮：用于「删除」这类不可撤销的确认 -->
@@ -241,7 +269,7 @@
         <Setter Property="MinHeight" Value="6" />
         <Setter Property="CornerRadius" Value="3" />
         <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-        <Setter Property="Background" Value="{DynamicResource SubtleSurfaceBrush}" />
+        <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
     </Style>
 
     <!-- 选项行：整行可点 -->

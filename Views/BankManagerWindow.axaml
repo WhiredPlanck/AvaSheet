@@ -130,7 +130,7 @@
                                HorizontalAlignment="Center"
                                Margin="0,4,0,0" />
                     <TextBlock Classes="muted"
-                               Text="新建一个题库，或者从别处导入一份 JSON。"
+                               Text="新建或导入一个题库。"
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </Border>

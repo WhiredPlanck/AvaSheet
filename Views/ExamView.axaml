@@ -62,7 +62,7 @@
                             VerticalAlignment="Center">
                     <TextBlock Classes="cardTitle" Text="这里还组不出一份卷子" HorizontalAlignment="Center" />
                     <TextBlock Classes="muted"
-                               Text="先在顶栏选一个有题目的题库，或者去「管理题目」里添加几道。"
+                               Text="先去「管理题目」添加几道题。"
                                TextWrapping="Wrap"
                                TextAlignment="Center"
                                MaxWidth="420" />
@@ -82,16 +82,7 @@
                             VerticalAlignment="Center">
                     <Border Classes="formPanel" Padding="22">
                         <StackPanel Spacing="8">
-                            <TextBlock Classes="fieldLabel" Text="组卷方式" />
-                            <TextBlock Text="{Binding PaperSummary}"
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource AppForegroundBrush}" />
-
-                            <Border Height="1"
-                                    Background="{DynamicResource DividerBrush}"
-                                    Margin="0,6" />
-
-                            <TextBlock Classes="fieldLabel" Text="各题型题量与分值" />
+                            <TextBlock Classes="fieldLabel" Text="题型题量" />
                             <Grid ColumnDefinitions="*,104,112"
                                   RowDefinitions="Auto,Auto,Auto,Auto"
                                   RowSpacing="6"
@@ -151,14 +142,13 @@
                                                Increment="0.5"
                                                FormatString="0.0#" />
                             </Grid>
-                            <TextBlock Classes="small" Text="题量不能超过题库现有的数量；分值以 0.5 分为最小间隔。" />
 
                             <Border Height="1"
                                     Background="{DynamicResource DividerBrush}"
                                     Margin="0,6" />
 
                             <TextBlock Classes="fieldLabel" Text="限时" />
-                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
                                 <NumericUpDown Grid.Column="0"
                                                Width="120"
                                                Value="{Binding LimitMinutesValue, Mode=TwoWay}"
@@ -169,10 +159,6 @@
                                 <TextBlock Grid.Column="1"
                                            Classes="small"
                                            Text="分钟"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Classes="small"
-                                           Text="默认每题 1 分钟，可以直接填。"
                                            VerticalAlignment="Center" />
                             </Grid>
 
@@ -288,7 +274,7 @@
                                 </ItemsControl>
 
                                 <TextBlock Classes="small"
-                                           Text="多选题请把所有正确选项都选上；漏选、多选都算 0 分。"
+                                           Text="多选题要全部选对才得分。"
                                            Margin="0,6,0,0"
                                            IsVisible="{Binding Current.IsMultiple}" />
                             </StackPanel>

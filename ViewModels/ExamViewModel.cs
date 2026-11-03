@@ -90,11 +90,11 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     public override string Description => Phase switch
     {
-        ExamPhase.Empty => "当前题库还没有题目，先去「管理题目」添加几道。",
-        ExamPhase.Config => "按题型配比随机组卷、限时作答，交卷后统一评分。",
-        ExamPhase.Running => "可以前后翻页、随时改答案；交卷前不显示对错。",
+        ExamPhase.Empty => "先去「管理题目」添加几道题。",
+        ExamPhase.Config => "按题型组卷、限时作答，交卷后统一评分。",
+        ExamPhase.Running => "可以前后翻页、随时改答案。",
         ExamPhase.Finished => "成绩与逐题回顾都在下面。",
-        _ => "按题型配比随机组卷、限时作答，交卷后统一评分。",
+        _ => "按题型组卷、限时作答，交卷后统一评分。",
     };
 
     public string BankName => _bank?.Name ?? _initialBankName ?? "未选择题库";
@@ -163,12 +163,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     public string MultipleLabel => $"多选题（现有 {MultipleAvailable}）";
 
     public string TrueFalseLabel => $"判断题（现有 {TrueFalseAvailable}）";
-
-    /// <summary>这一份卷子怎么组。</summary>
-    public string PaperSummary => PaperSize == 0
-        ? "还没有分配题量，至少给一种题型留一道题。"
-        : $"本次抽取：单选 {SingleCount} · 多选 {MultipleCount} · 判断 {TrueFalseCount}" +
-          $"（共 {PaperSize} 题 · 满分 {FormatScore(FullScore)} 分）";
 
     // ---- 组卷设置：各题型题量与分值 ----
 
@@ -287,7 +281,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         OnPropertyChanged(nameof(PaperSizeText));
         OnPropertyChanged(nameof(FullScore));
         OnPropertyChanged(nameof(FullScoreText));
-        OnPropertyChanged(nameof(PaperSummary));
         OnPropertyChanged(nameof(PaperTotalsText));
         OnPropertyChanged(nameof(SingleLabel));
         OnPropertyChanged(nameof(MultipleLabel));
@@ -304,7 +297,9 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     public string FullScoreText => $"满分 {FormatScore(FullScore)} 分";
 
-    public string PaperTotalsText => $"共 {PaperSize} 题 · 满分 {FormatScore(FullScore)} 分";
+    public string PaperTotalsText => PaperSize == 0
+        ? "至少给一种题型留一道题。"
+        : $"共 {PaperSize} 题 · 满分 {FormatScore(FullScore)} 分";
 
     public ObservableCollection<ExamQuestionViewModel> Questions { get; } = [];
 
@@ -866,7 +861,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         OnPropertyChanged(nameof(IsAnswering));
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(BankSummaryText));
-        OnPropertyChanged(nameof(PaperSummary));
         OnPropertyChanged(nameof(PaperTotalsText));
         OnPropertyChanged(nameof(SingleLabel));
         OnPropertyChanged(nameof(MultipleLabel));

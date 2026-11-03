@@ -115,16 +115,16 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     public override string Description => _wrongBookEntry
         ? Phase switch
         {
-            PracticePhase.Empty => "错题本还没有题目，去平时练习做一轮，错的题会自动收进来。",
+            PracticePhase.Empty => "去平时练习做一轮，做错的题会自动收进来。",
             PracticePhase.Finished => "这一轮错题做完了，答对的题已经移出错题本。",
             _ => "只练做错的题，答对后自动移出错题本。",
         }
         : Phase switch
         {
-            PracticePhase.Empty => "当前题库还没有题目，先去「管理题目」添加几道。",
-            PracticePhase.Setup => "选择题型和顺序；做过的题会记住，下次接着做没做的。",
-            PracticePhase.Finished => "这一轮做完了；可以接着做没做的题，也可以换一种题型。",
-            _ => "逐题作答、即时判定，做错的题会自动进错题本。",
+            PracticePhase.Empty => "先去「管理题目」添加几道题。",
+            PracticePhase.Setup => "按题型练习，进度会自动记住。",
+            PracticePhase.Finished => "这一轮做完了。",
+            _ => "做错的题会自动收进错题本。",
         };
 
     public string BankName => _bank?.Name ?? _initialBankName ?? "未选择题库";
@@ -292,7 +292,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         {
             var elapsed = DateTimeOffset.Now - _startedAt;
             var minutes = (int)elapsed.TotalMinutes;
-            var seconds = elapsed.Seconds;
+            var seconds = Math.Max(1, (int)elapsed.TotalSeconds % 60);
             return minutes > 0 ? $"用时 {minutes} 分 {seconds} 秒" : $"用时 {seconds} 秒";
         }
     }
@@ -303,7 +303,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     public bool HasWrongBook => WrongBookCount > 0;
 
     public string WrongBookText => WrongBookCount == 0
-        ? "题库里没有错题，这一轮很干净。"
+        ? "题库里还没有错题。"
         : $"错题本里还有 {WrongBookCount} 道题，可以专门再刷一遍。";
 
     public string WrongOnlyButtonText => $"只练错题（{WrongBookCount}）";
@@ -341,8 +341,8 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         : "这里还没有可以练习的题目";
 
     public string EmptyHint => _wrongBookEntry && _bank is not null
-        ? "平时练习里做错的题会自动收进来，答对之后又会自动移出。"
-        : "先在顶栏选一个有题目的题库，或者去「管理题目」里添加几道。";
+        ? "去平时练习做一轮，做错的题会自动收进来。"
+        : "先去「管理题目」添加几道题。";
 
     /// <summary>错题本为空时给一个去平时练习的快捷入口。</summary>
     public bool ShowPracticeShortcut => _wrongBookEntry && _bank is not null;

@@ -55,7 +55,7 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
     public override string Title => "考试记录";
 
-    public override string Description => "每次交卷都会自动留档，可以回看成绩和逐题作答。";
+    public override string Description => "历次考试的成绩与逐题作答。";
 
     [ObservableProperty]
     public partial ExamRecordsPhase Phase { get; set; } = ExamRecordsPhase.Loading;

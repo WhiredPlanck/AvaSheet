@@ -30,6 +30,7 @@
 
                     <!-- 模拟考试 -->
                     <Button Grid.Column="0"
+                            Classes="card"
                             Theme="{StaticResource CardButtonTheme}"
                             Command="{Binding OpenExamCommand}">
                         <Grid RowDefinitions="Auto,*,Auto">
@@ -43,7 +44,7 @@
                                 <TextBlock Classes="cardTitle" Text="模拟考试" />
                                 <TextBlock Classes="muted"
                                            TextWrapping="Wrap"
-                                           Text="按题型组卷，限时作答，交卷后统一评分。" />
+                                           Text="按题型组卷、限时作答，交卷后统一评分。" />
                             </StackPanel>
 
                             <TextBlock Grid.Row="2" Classes="cardAction" Text="开始 →" />
@@ -52,6 +53,7 @@
 
                     <!-- 平时练习 -->
                     <Button Grid.Column="1"
+                            Classes="card"
                             Theme="{StaticResource CardButtonTheme}"
                             Command="{Binding OpenPracticeCommand}">
                         <Grid RowDefinitions="Auto,*,Auto">
@@ -65,7 +67,7 @@
                                 <TextBlock Classes="cardTitle" Text="平时练习" />
                                 <TextBlock Classes="muted"
                                            TextWrapping="Wrap"
-                                           Text="逐题作答、即时判定，答完展开解析，并记录错题。" />
+                                           Text="逐题即时判定，答完看解析，错题自动收录。" />
                             </StackPanel>
 
                             <TextBlock Grid.Row="2" Classes="cardAction" Text="开始 →" />
@@ -74,6 +76,7 @@
 
                     <!-- 错题本 -->
                     <Button Grid.Column="2"
+                            Classes="card"
                             Theme="{StaticResource CardButtonTheme}"
                             Command="{Binding OpenWrongBookCommand}">
                         <Grid RowDefinitions="Auto,*,Auto">
@@ -99,6 +102,7 @@
                 <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16">
 
                     <Button Grid.Column="0"
+                            Classes="card"
                             Theme="{StaticResource CardButtonTheme}"
                             Padding="20,16"
                             MinHeight="92"
@@ -115,7 +119,7 @@
                                 <TextBlock Classes="muted"
                                            TextWrapping="Wrap"
                                            MaxLines="2"
-                                           Text="增删改查、按类型筛选，支持批量导入与导出。" />
+                                           Text="新增、编辑题目，支持批量导入导出。" />
                             </StackPanel>
 
                             <TextBlock Grid.Column="2"
@@ -126,6 +130,7 @@
                     </Button>
 
                     <Button Grid.Column="1"
+                            Classes="card"
                             Theme="{StaticResource CardButtonTheme}"
                             Padding="20,16"
                             MinHeight="92"

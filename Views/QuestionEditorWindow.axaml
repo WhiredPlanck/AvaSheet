@@ -17,9 +17,8 @@
     <Grid RowDefinitions="Auto,*,Auto" Margin="24,20,24,18">
 
         <!-- 头部 -->
-        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Classes="h2" Text="{Binding Title}" />
-            <TextBlock Classes="small" Text="题干与选项都是纯文本，不解析任何标记。" />
         </StackPanel>
 
         <ScrollViewer Grid.Row="1"
@@ -136,7 +135,7 @@
                              TextWrapping="Wrap"
                              Height="76"
                              VerticalContentAlignment="Top"
-                             PlaceholderText="答题后展示的讲解，可以留空。" />
+                             PlaceholderText="答题后展示的讲解" />
                 </StackPanel>
 
                 <!-- 难度 + 标签 -->

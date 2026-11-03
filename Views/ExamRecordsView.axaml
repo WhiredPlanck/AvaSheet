@@ -197,7 +197,7 @@
                     <TextBlock Classes="cardTitle" Text="还没有考试记录" Margin="0,6,0,0" />
                     <TextBlock Classes="muted"
                                TextWrapping="Wrap"
-                               Text="模拟考试交卷后会自动留在这里，可以回看成绩和逐题作答。" />
+                               Text="交卷后的成绩会自动记录在这里。" />
                     <Button Classes="accent"
                             Content="去模拟考试"
                             HorizontalAlignment="Left"

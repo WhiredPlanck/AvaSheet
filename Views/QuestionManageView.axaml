@@ -40,8 +40,6 @@
                         <TextBlock Classes="pillText" Text="{Binding BankName}" />
                     </Border>
                 </StackPanel>
-
-                <TextBlock Classes="small" Text="双击一行可以编辑，改动会立即保存。" />
             </StackPanel>
 
             <StackPanel Grid.Column="1"
@@ -49,7 +47,7 @@
                         Spacing="10"
                         VerticalAlignment="Bottom">
                 <Button Command="{Binding ImportQuestionsCommand}"
-                        ToolTip.Tip="从一个 JSON 文件（题目数组或含 questions 字段的对象）导入题目">
+                        ToolTip.Tip="从 JSON 文件导入题目">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                         <PathIcon Data="{StaticResource IconImport}" Width="15" Height="15" />
                         <TextBlock Text="导入题目" VerticalAlignment="Center" />
@@ -169,9 +167,6 @@
             <Border Classes="emptyPanel" IsVisible="{Binding !HasBank}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                     <TextBlock Classes="cardTitle" Text="还没有选择题库" HorizontalAlignment="Center" />
-                    <TextBlock Classes="muted"
-                               Text="用顶栏的题库下拉框选一个，或者点右边的文件夹图标新建、导入。"
-                               HorizontalAlignment="Center" />
                     <Button Classes="accent"
                             Content="去管理题库"
                             HorizontalAlignment="Center"
@@ -184,9 +179,6 @@
             <Border Classes="emptyPanel" IsVisible="{Binding IsEmptyBank}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                     <TextBlock Classes="cardTitle" Text="这个题库还没有题目" HorizontalAlignment="Center" />
-                    <TextBlock Classes="muted"
-                               Text="先手动新建一道，或者从 JSON 文件批量导入。"
-                               HorizontalAlignment="Center" />
                     <Button Classes="accent"
                             Content="新建第一道题"
                             HorizontalAlignment="Center"
@@ -200,7 +192,7 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                     <TextBlock Classes="cardTitle" Text="没有匹配的题目" HorizontalAlignment="Center" />
                     <TextBlock Classes="muted"
-                               Text="换个关键词，或者把题型筛选切回「全部」。"
+                               Text="换个关键词，或切回「全部」。"
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </Border>

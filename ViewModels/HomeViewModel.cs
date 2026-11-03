@@ -28,7 +28,7 @@ public partial class HomeViewModel : ViewModelBase
 
     public string Headline => "开始今天的练习";
 
-    public string Subheadline => "选择一个入口，题目全部来自本地题库，不需要联网。";
+    public string Subheadline => "题目全部来自本地题库，不需要联网。";
 
     /// <summary>当前题库里还没掌握的题目数，卡片上直接显示。</summary>
     public int WrongBookCount => _getBank?.Invoke()?.WrongCount ?? 0;
