@@ -369,7 +369,28 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void About() => StatusText = "ExamSystem 0.1 · 单机考试系统";
+    private void About()
+    {
+        if (_dialogs is null)
+        {
+            StatusText = "当前环境没有可用的窗口服务";
+            return;
+        }
+
+        _ = ShowAboutAsync(_dialogs);
+    }
+
+    private async Task ShowAboutAsync(IDialogService dialogs)
+    {
+        try
+        {
+            await dialogs.ShowAboutAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusText = "无法打开关于窗口：" + ex.Message;
+        }
+    }
 
     [RelayCommand]
     private void Exit()

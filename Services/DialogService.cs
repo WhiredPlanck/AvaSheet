@@ -111,4 +111,10 @@ public sealed class DialogService : IDialogService
         var dialog = new ImportResultWindow { DataContext = viewModel };
         return dialog.ShowDialog(_owner);
     }
+
+    public Task ShowAboutAsync()
+    {
+        var dialog = new AboutWindow();
+        return dialog.ShowDialog(_owner);
+    }
 }

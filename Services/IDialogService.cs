@@ -32,6 +32,9 @@ public interface IDialogService
     /// <summary>显示导入结果的明细窗。</summary>
     Task ShowImportResultAsync(ImportResultViewModel viewModel);
 
+    /// <summary>显示「关于」窗口：图标、软件名称和版本。</summary>
+    Task ShowAboutAsync();
+
     /// <summary>选导出目标，返回 null 表示用户取消。</summary>
     Task<IStorageFile?> PickExportFileAsync(string suggestedFileName);
 }
