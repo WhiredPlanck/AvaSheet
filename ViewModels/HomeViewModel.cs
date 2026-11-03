@@ -11,8 +11,8 @@ public partial class HomeViewModel : ViewModelBase
     private readonly Func<BankSummary?>? _getBank;
 
     private int _recordCount;
-    private int? _lastScore;
-    private int? _lastTotal;
+    private double? _lastScore;
+    private double? _lastTotal;
 
     /// <summary>供 XAML 设计器预览使用。</summary>
     public HomeViewModel()
@@ -40,7 +40,7 @@ public partial class HomeViewModel : ViewModelBase
     public string RecordsHint => _recordCount == 0
         ? "交卷后自动留档，方便回看。"
         : _lastScore is { } score && _lastTotal is { } total
-            ? $"已记录 {_recordCount} 次考试，最近一次 {score} / {total} 分。"
+            ? $"已记录 {_recordCount} 次考试，最近一次 {score:0.##} / {total:0.##} 分。"
             : $"已记录 {_recordCount} 次考试。";
 
     [RelayCommand]
@@ -66,7 +66,7 @@ public partial class HomeViewModel : ViewModelBase
     }
 
     /// <summary>考试记录有增删后刷新卡片上的动态文案。</summary>
-    public void RefreshRecordInfo(int count, int? lastScore, int? lastTotal)
+    public void RefreshRecordInfo(int count, double? lastScore, double? lastTotal)
     {
         _recordCount = count;
         _lastScore = lastScore;

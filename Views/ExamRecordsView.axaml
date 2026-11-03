@@ -146,6 +146,10 @@
                                                                 <TextBlock Classes="small"
                                                                            Text="{Binding TypeShort}"
                                                                            VerticalAlignment="Center" />
+                                                                <TextBlock Classes="small"
+                                                                           Text="{Binding ScoreText}"
+                                                                           IsVisible="{Binding HasScore}"
+                                                                           VerticalAlignment="Center" />
                                                             </StackPanel>
 
                                                             <TextBlock Text="{Binding Stem}"

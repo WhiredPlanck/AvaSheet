@@ -31,9 +31,11 @@ public sealed class ExamRecord
     /// <summary>是不是时间到被自动交卷的。</summary>
     public bool AutoSubmitted { get; set; }
 
-    public int Score { get; set; }
+    /// <summary>得分（可以带 0.5）。</summary>
+    public double Score { get; set; }
 
-    public int Total { get; set; }
+    /// <summary>满分。</summary>
+    public double Total { get; set; }
 
     public int CorrectCount { get; set; }
 
@@ -62,6 +64,9 @@ public sealed class ExamRecordAnswer
     public bool IsAnswered { get; set; }
 
     public bool IsCorrect { get; set; }
+
+    /// <summary>这道题的分值。</summary>
+    public double Score { get; set; }
 
     public string? Explanation { get; set; }
 }

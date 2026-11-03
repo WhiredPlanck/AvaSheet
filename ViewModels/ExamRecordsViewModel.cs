@@ -75,9 +75,9 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
     // ---------------------------------------------------------------- 汇总
 
-    private int TotalQuestions => Records.Sum(r => r.Record.Total);
+    private double TotalQuestions => Records.Sum(r => r.Record.Total);
 
-    private int TotalScore => Records.Sum(r => r.Record.Score);
+    private double TotalScore => Records.Sum(r => r.Record.Score);
 
     public string CountText => $"{Records.Count} 次";
 
@@ -87,7 +87,9 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
     public string RecentText => Records.Count == 0
         ? "—"
-        : $"{Records[0].Record.Score} / {Records[0].Record.Total}";
+        : $"{FormatScore(Records[0].Record.Score)} / {FormatScore(Records[0].Record.Total)}";
+
+    internal static string FormatScore(double value) => value.ToString("0.##");
 
     // ---------------------------------------------------------------- 加载 / 删除
 
@@ -234,11 +236,11 @@ public sealed partial class ExamRecordRowViewModel : ObservableObject
 
     public string DateText => Record.FinishedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
-    public string ScoreText => Record.Score.ToString();
+    public string ScoreText => Record.Score.ToString("0.##");
 
-    public string ScoreTotalText => $"/ {Record.Total}";
+    public string ScoreTotalText => $"/ {Record.Total.ToString("0.##")}";
 
-    public string AccuracyText => Record.Total == 0
+    public string AccuracyText => Record.Total <= 0
         ? "0%"
         : $"{Math.Round(100.0 * Record.Score / Record.Total)}%";
 
@@ -246,7 +248,13 @@ public sealed partial class ExamRecordRowViewModel : ObservableObject
         ? $"{Record.ElapsedSeconds / 60} 分 {Record.ElapsedSeconds % 60} 秒"
         : $"{Record.ElapsedSeconds} 秒";
 
-    public string MetaText => $"{Record.Total} 题 · 限时 {Record.LimitMinutes} 分钟 · {DurationText}";
+    /// <summary>记录里的题数。旧记录没存逐题明细时用各项计数推。</summary>
+    public int QuestionCount => Record.Answers.Count > 0
+        ? Record.Answers.Count
+        : Record.CorrectCount + Record.WrongCount + Record.UnansweredCount;
+
+    public string MetaText =>
+        $"{QuestionCount} 题 · 限时 {Record.LimitMinutes} 分钟 · {DurationText}";
 
     /// <summary>「时间到自动交卷」「3 题未答」这类需要提醒的补充说明。</summary>
     public string NoteText
@@ -305,6 +313,11 @@ public sealed class ExamRecordAnswerViewModel
     public int Number { get; }
 
     public string TypeShort => Answer.Type.ToShortLabel();
+
+    /// <summary>这道题的分值，0 表示旧记录里没存。</summary>
+    public string ScoreText => Answer.Score > 0 ? $"{Answer.Score:0.##} 分" : "";
+
+    public bool HasScore => Answer.Score > 0;
 
     public string Stem => Answer.Stem;
 

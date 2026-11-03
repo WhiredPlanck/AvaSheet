@@ -58,6 +58,9 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     private DateTimeOffset _startedAt;
     private bool _submitted;
 
+    /// <summary>用户是否亲手改过时长；没改过时，题量变了时长跟着推算值走。</summary>
+    private bool _timeTouched;
+
     /// <summary>供 XAML 预览器使用。</summary>
     public ExamViewModel()
     {
@@ -108,9 +111,21 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     public bool HasWrongBookNote => !string.IsNullOrEmpty(WrongBookNote);
 
-    /// <summary>用户可改的限时（分钟）。默认每题 1 分钟。</summary>
+    /// <summary>用户可改的限时（分钟）。默认按题量推算，可以自己填。</summary>
     [ObservableProperty]
     public partial int LimitMinutes { get; set; } = 1;
+
+    /// <summary>限时输入框的值（NumericUpDown 绑 decimal）。</summary>
+    public decimal? LimitMinutesValue
+    {
+        get => LimitMinutes;
+        set
+        {
+            _timeTouched = true;
+            LimitMinutes = Math.Clamp((int)Math.Round(value ?? 1), 1, 600);
+            OnPropertyChanged();
+        }
+    }
 
     [ObservableProperty]
     public partial string RemainingText { get; set; } = "00:00";
@@ -133,23 +148,163 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     /// <summary>作答中隐藏主窗口的顶栏和状态栏。</summary>
     public bool IsAnswering => Phase == ExamPhase.Running;
 
+    /// <summary>题库里各题型各有多少题（也是题量上限）。</summary>
+    public int SingleAvailable { get; private set; }
+
+    public int MultipleAvailable { get; private set; }
+
+    public int TrueFalseAvailable { get; private set; }
+
     /// <summary>题库里各题型各有多少题（设置页提示用）。</summary>
     public string BankSummaryText { get; private set; } = "";
 
-    /// <summary>这一份卷子实际会抽多少题。</summary>
-    public string PaperSummary { get; private set; } = "";
+    public string SingleLabel => $"单选题（现有 {SingleAvailable}）";
 
-    public int SingleCount { get; private set; }
+    public string MultipleLabel => $"多选题（现有 {MultipleAvailable}）";
 
-    public int MultipleCount { get; private set; }
+    public string TrueFalseLabel => $"判断题（现有 {TrueFalseAvailable}）";
 
-    public int TrueFalseCount { get; private set; }
+    /// <summary>这一份卷子怎么组。</summary>
+    public string PaperSummary => PaperSize == 0
+        ? "还没有分配题量，至少给一种题型留一道题。"
+        : $"本次抽取：单选 {SingleCount} · 多选 {MultipleCount} · 判断 {TrueFalseCount}" +
+          $"（共 {PaperSize} 题 · 满分 {FormatScore(FullScore)} 分）";
+
+    // ---- 组卷设置：各题型题量与分值 ----
+
+    [ObservableProperty]
+    public partial int SingleCount { get; set; }
+
+    [ObservableProperty]
+    public partial int MultipleCount { get; set; }
+
+    [ObservableProperty]
+    public partial int TrueFalseCount { get; set; }
+
+    /// <summary>每种题型每题多少分，最小 0.5 分。</summary>
+    [ObservableProperty]
+    public partial double SingleScore { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial double MultipleScore { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial double TrueFalseScore { get; set; } = 1;
+
+    public decimal? SingleCountValue
+    {
+        get => SingleCount;
+        set
+        {
+            SingleCount = ClampCount(value, SingleAvailable);
+            OnPropertyChanged();
+        }
+    }
+
+    public decimal? MultipleCountValue
+    {
+        get => MultipleCount;
+        set
+        {
+            MultipleCount = ClampCount(value, MultipleAvailable);
+            OnPropertyChanged();
+        }
+    }
+
+    public decimal? TrueFalseCountValue
+    {
+        get => TrueFalseCount;
+        set
+        {
+            TrueFalseCount = ClampCount(value, TrueFalseAvailable);
+            OnPropertyChanged();
+        }
+    }
+
+    public decimal? SingleScoreValue
+    {
+        get => (decimal)SingleScore;
+        set
+        {
+            SingleScore = ClampScore(value);
+            OnPropertyChanged();
+        }
+    }
+
+    public decimal? MultipleScoreValue
+    {
+        get => (decimal)MultipleScore;
+        set
+        {
+            MultipleScore = ClampScore(value);
+            OnPropertyChanged();
+        }
+    }
+
+    public decimal? TrueFalseScoreValue
+    {
+        get => (decimal)TrueFalseScore;
+        set
+        {
+            TrueFalseScore = ClampScore(value);
+            OnPropertyChanged();
+        }
+    }
+
+    private static int ClampCount(decimal? value, int max) =>
+        Math.Clamp((int)Math.Round(value ?? 0, MidpointRounding.AwayFromZero), 0, Math.Max(0, max));
+
+    private static double ClampScore(decimal? value)
+    {
+        var rounded = Math.Round((double)(value ?? 1) * 2, MidpointRounding.AwayFromZero) / 2;
+        return Math.Clamp(rounded, 0.5, 100);
+    }
+
+    private static string FormatScore(double value) => value.ToString("0.##");
+
+    partial void OnSingleCountChanged(int value) => OnPaperChanged();
+
+    partial void OnMultipleCountChanged(int value) => OnPaperChanged();
+
+    partial void OnTrueFalseCountChanged(int value) => OnPaperChanged();
+
+    partial void OnSingleScoreChanged(double value) => OnPaperChanged();
+
+    partial void OnMultipleScoreChanged(double value) => OnPaperChanged();
+
+    partial void OnTrueFalseScoreChanged(double value) => OnPaperChanged();
+
+    /// <summary>题量或分值变了：刷新摘要、满分，并按需跟着推算时长。</summary>
+    private void OnPaperChanged()
+    {
+        if (!_timeTouched)
+        {
+            LimitMinutes = Math.Clamp(PaperSize, 1, 600);
+            OnPropertyChanged(nameof(LimitMinutesValue));
+        }
+
+        OnPropertyChanged(nameof(PaperSize));
+        OnPropertyChanged(nameof(PaperSizeText));
+        OnPropertyChanged(nameof(FullScore));
+        OnPropertyChanged(nameof(FullScoreText));
+        OnPropertyChanged(nameof(PaperSummary));
+        OnPropertyChanged(nameof(PaperTotalsText));
+        OnPropertyChanged(nameof(SingleLabel));
+        OnPropertyChanged(nameof(MultipleLabel));
+        OnPropertyChanged(nameof(TrueFalseLabel));
+        StartCommand.NotifyCanExecuteChanged();
+    }
 
     public int PaperSize => SingleCount + MultipleCount + TrueFalseCount;
 
     public string PaperSizeText => $"{PaperSize} 题";
 
-    public string FullScoreText => $"满分 {PaperSize} 分";
+    public double FullScore =>
+        SingleCount * SingleScore + MultipleCount * MultipleScore + TrueFalseCount * TrueFalseScore;
+
+    public string FullScoreText => $"满分 {FormatScore(FullScore)} 分";
+
+    public string PaperTotalsText => $"共 {PaperSize} 题 · 满分 {FormatScore(FullScore)} 分";
 
     public ObservableCollection<ExamQuestionViewModel> Questions { get; } = [];
 
@@ -181,22 +336,22 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     // ---- 成绩 ----
 
     [ObservableProperty]
-    public partial int Score { get; set; }
+    public partial double Score { get; set; }
 
-    public string ScoreText => $"{Score}";
+    public string ScoreText => FormatScore(Score);
 
-    public string ScoreTotalText => $"/ {Questions.Count}";
+    public string ScoreTotalText => $"/ {FormatScore(FullScore)}";
 
     public string AccuracyText =>
-        Questions.Count == 0 ? "0%" : $"{Math.Round(100.0 * Score / Questions.Count)}%";
+        FullScore <= 0 ? "0%" : $"{Math.Round(100.0 * Score / FullScore)}%";
 
     public string ScoreSummary
     {
         get
         {
             var unanswered = Questions.Count(q => !q.IsAnswered);
-            var wrong = Questions.Count - Score - unanswered;
-            return $"答对 {Score} 题 · 答错 {wrong} 题 · 未答 {unanswered} 题";
+            var wrong = Questions.Count(q => q.IsAnswered) - Questions.Count(q => q.IsCorrect);
+            return $"答对 {Questions.Count(q => q.IsCorrect)} 题 · 答错 {wrong} 题 · 未答 {unanswered} 题";
         }
     }
 
@@ -211,6 +366,9 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     /// <summary>供「关窗口」时询问用。</summary>
     public bool CanExitWithoutPrompt => Phase != ExamPhase.Running;
+
+    /// <summary>组卷至少要有一道题。</summary>
+    public bool CanStart => PaperSize > 0;
 
     // ---------------------------------------------------------------- 加载
 
@@ -251,18 +409,27 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     private void PrepareConfig()
     {
-        SingleCount = Math.Min(TargetSingleChoice, CountOf(QuestionType.SingleChoice));
-        MultipleCount = Math.Min(TargetMultipleChoice, CountOf(QuestionType.MultipleChoice));
-        TrueFalseCount = Math.Min(TargetTrueFalse, CountOf(QuestionType.TrueFalse));
+        SingleAvailable = CountOf(QuestionType.SingleChoice);
+        MultipleAvailable = CountOf(QuestionType.MultipleChoice);
+        TrueFalseAvailable = CountOf(QuestionType.TrueFalse);
+
+        // 重新组卷时回到默认配比与分值，时长也回到推算值。
+        _timeTouched = false;
+        SingleScore = 1;
+        MultipleScore = 1;
+        TrueFalseScore = 1;
+
+        SingleCount = Math.Min(TargetSingleChoice, SingleAvailable);
+        MultipleCount = Math.Min(TargetMultipleChoice, MultipleAvailable);
+        TrueFalseCount = Math.Min(TargetTrueFalse, TrueFalseAvailable);
 
         BankSummaryText =
-            $"题库现有：单选 {CountOf(QuestionType.SingleChoice)} · " +
-            $"多选 {CountOf(QuestionType.MultipleChoice)} · " +
-            $"判断 {CountOf(QuestionType.TrueFalse)}";
+            $"题库现有：单选 {SingleAvailable} · " +
+            $"多选 {MultipleAvailable} · " +
+            $"判断 {TrueFalseAvailable}";
 
-        PaperSummary = PaperSize == 0
-            ? "题库里没有可抽取的题目。"
-            : $"本次抽取：单选 {SingleCount} · 多选 {MultipleCount} · 判断 {TrueFalseCount}（共 {PaperSize} 题）";
+        // 题量没变化时上面的 OnPaperChanged 不会触发，这里兜一次推算时长。
+        LimitMinutes = Math.Clamp(PaperSize, 1, 600);
 
         if (PaperSize == 0)
         {
@@ -270,7 +437,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         }
         else
         {
-            LimitMinutes = PaperSize;
             Phase = ExamPhase.Config;
         }
 
@@ -282,7 +448,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     // ---------------------------------------------------------------- 组卷
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStart))]
     private void Start()
     {
         if (_bank is null || PaperSize == 0)
@@ -412,13 +578,13 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     [RelayCommand]
     private void DecreaseMinutes()
     {
-        LimitMinutes = Math.Max(1, LimitMinutes - 5);
+        LimitMinutesValue = LimitMinutes - 1;
     }
 
     [RelayCommand]
     private void IncreaseMinutes()
     {
-        LimitMinutes = Math.Min(600, LimitMinutes + 5);
+        LimitMinutesValue = LimitMinutes + 1;
     }
 
     private void OnTick(object? sender, EventArgs e)
@@ -501,7 +667,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
             question.Evaluate();
         }
 
-        Score = Questions.Count(q => q.IsCorrect);
+        Score = Math.Round(Questions.Where(q => q.IsCorrect).Sum(q => q.Score), 2);
         UnansweredText = unanswered == 0
             ? "全部题目都已作答。"
             : $"有 {unanswered} 题未作答，按 0 分计。";
@@ -603,7 +769,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
             LimitMinutes = Math.Clamp(LimitMinutes, 1, 600),
             AutoSubmitted = autoSubmitted,
             Score = Score,
-            Total = Questions.Count,
+            Total = FullScore,
             CorrectCount = Questions.Count(q => q.IsCorrect),
             WrongCount = Questions.Count(q => q.IsAnswered && !q.IsCorrect),
             UnansweredCount = Questions.Count(q => !q.IsAnswered),
@@ -618,6 +784,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
                     .Select(o => o.Key)],
                 IsAnswered = q.IsAnswered,
                 IsCorrect = q.IsCorrect,
+                Score = q.Score,
                 Explanation = q.Question.Explanation,
             })],
         };
@@ -672,9 +839,17 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     private void Restart()
     {
         _submitted = false;
+        Score = 0;
+        ElapsedText = "";
+        ErrorMessage = null;
+        WrongBookNote = null;
         Questions.Clear();
         Navigator.Clear();
-        PrepareConfig();
+        CurrentIndex = 0;
+
+        // 保留用户上次设置的题量、分值与时长，直接回到组卷页。
+        Phase = PaperSize == 0 ? ExamPhase.Empty : ExamPhase.Config;
+        NotifyAll();
     }
 
     // ---------------------------------------------------------------- 通知
@@ -692,6 +867,22 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(BankSummaryText));
         OnPropertyChanged(nameof(PaperSummary));
+        OnPropertyChanged(nameof(PaperTotalsText));
+        OnPropertyChanged(nameof(SingleLabel));
+        OnPropertyChanged(nameof(MultipleLabel));
+        OnPropertyChanged(nameof(TrueFalseLabel));
+        OnPropertyChanged(nameof(SingleAvailable));
+        OnPropertyChanged(nameof(MultipleAvailable));
+        OnPropertyChanged(nameof(TrueFalseAvailable));
+        OnPropertyChanged(nameof(SingleCountValue));
+        OnPropertyChanged(nameof(MultipleCountValue));
+        OnPropertyChanged(nameof(TrueFalseCountValue));
+        OnPropertyChanged(nameof(SingleScoreValue));
+        OnPropertyChanged(nameof(MultipleScoreValue));
+        OnPropertyChanged(nameof(TrueFalseScoreValue));
+        OnPropertyChanged(nameof(LimitMinutesValue));
+        OnPropertyChanged(nameof(CanStart));
+        OnPropertyChanged(nameof(FullScore));
         OnPropertyChanged(nameof(PaperSize));
         OnPropertyChanged(nameof(PaperSizeText));
         OnPropertyChanged(nameof(FullScoreText));
@@ -738,6 +929,12 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
         _owner = owner;
         Question = question;
         Number = number;
+        Score = question.Type switch
+        {
+            QuestionType.SingleChoice => owner.SingleScore,
+            QuestionType.MultipleChoice => owner.MultipleScore,
+            _ => owner.TrueFalseScore,
+        };
 
         foreach (var choice in question.Choices ?? [])
         {
@@ -755,6 +952,11 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
     public Question Question { get; }
 
     public int Number { get; }
+
+    /// <summary>这道题在卷面上的分值。</summary>
+    public double Score { get; }
+
+    public string ScoreText => $"{Score:0.##} 分";
 
     public ObservableCollection<ExamOptionViewModel> Options { get; } = [];
 
