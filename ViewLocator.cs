@@ -1,33 +1,31 @@
-using System;
-using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using ExamSystem.ViewModels;
+using ExamSystem.Views;
 
 namespace ExamSystem;
 
 /// <summary>
 /// Given a view model, returns the corresponding view if possible.
+///
+/// 刻意不用「类型名替换 + Type.GetType + Activator」那套反射：
+/// 裁剪（Trim）与 Native AOT 下这些成员会被去掉，Avalonia 的默认实现因此带
+/// RequiresUnreferencedCode。这里改成显式映射，新增页面时在这里补一行即可。
 /// </summary>
-[RequiresUnreferencedCode(
-    "Default implementation of ViewLocator involves reflection which may be trimmed away.",
-    Url = "https://docs.avaloniaui.net/docs/concepts/view-locator")]
 public class ViewLocator : IDataTemplate
 {
     public Control? Build(object? param)
     {
-        if (param is null)
-            return null;
-        
-        var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-        var type = Type.GetType(name);
-
-        if (type != null)
+        return param switch
         {
-            return (Control)Activator.CreateInstance(type)!;
-        }
-        
-        return new TextBlock { Text = "Not Found: " + name };
+            HomeViewModel => new HomeView(),
+            ExamViewModel => new ExamView(),
+            PracticeViewModel => new PracticeView(),
+            QuestionManageViewModel => new QuestionManageView(),
+            ExamRecordsViewModel => new ExamRecordsView(),
+            null => null,
+            _ => new TextBlock { Text = "Not Found: " + param.GetType().FullName },
+        };
     }
 
     public bool Match(object? data)

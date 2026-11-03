@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using ExamSystem.Models;
 
 namespace ExamSystem.Services;
@@ -41,4 +42,24 @@ internal sealed partial class JsonContext : JsonSerializerContext
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
     }
+
+    // 下面这组 JsonTypeInfo 供 JsonSerializer/JsonNode 使用。
+    // 调用带 JsonSerializerOptions 的泛型重载会命中 RequiresUnreferencedCode /
+    // RequiresDynamicCode（IL2026 / IL3050），带 JsonTypeInfo 的重载则不会：
+    // 类型信息全部来自源生成上下文，裁剪后不需要任何反射或运行时代码生成。
+
+    public static JsonTypeInfo<QuestionBank> QuestionBankInfo => _questionBank ??= Get<QuestionBank>();
+
+    public static JsonTypeInfo<AppSettings> AppSettingsInfo => _appSettings ??= Get<AppSettings>();
+
+    public static JsonTypeInfo<List<Question>> QuestionListInfo => _questionList ??= Get<List<Question>>();
+
+    public static JsonTypeInfo<List<ExamRecord>> ExamRecordListInfo => _examRecordList ??= Get<List<ExamRecord>>();
+
+    private static JsonTypeInfo<QuestionBank>? _questionBank;
+    private static JsonTypeInfo<AppSettings>? _appSettings;
+    private static JsonTypeInfo<List<Question>>? _questionList;
+    private static JsonTypeInfo<List<ExamRecord>>? _examRecordList;
+
+    private static JsonTypeInfo<T> Get<T>() => (JsonTypeInfo<T>)Io.GetTypeInfo(typeof(T))!;
 }

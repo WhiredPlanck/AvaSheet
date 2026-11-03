@@ -122,7 +122,7 @@ public sealed class ExamRecordStore : IExamRecordStore
             await using var stream = new FileStream(
                 _file, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
 
-            var records = await JsonSerializer.DeserializeAsync<List<ExamRecord>>(stream, JsonContext.Io)
+            var records = await JsonSerializer.DeserializeAsync(stream, JsonContext.ExamRecordListInfo)
                           ?? [];
 
             foreach (var record in records)
@@ -147,7 +147,7 @@ public sealed class ExamRecordStore : IExamRecordStore
             Directory.CreateDirectory(directory);
         }
 
-        var json = JsonSerializer.Serialize(records, JsonContext.Io);
+        var json = JsonSerializer.Serialize(records, JsonContext.ExamRecordListInfo);
         var temp = _file + ".tmp";
 
         await using (var stream = new FileStream(

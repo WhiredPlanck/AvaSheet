@@ -460,7 +460,7 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
                 stream.SetLength(0);
             }
 
-            await JsonSerializer.SerializeAsync(stream, _all, JsonContext.Io);
+            await JsonSerializer.SerializeAsync(stream, _all, JsonContext.QuestionListInfo);
             await stream.FlushAsync();
         });
     }
@@ -492,7 +492,7 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
         List<Question>? list;
         try
         {
-            list = array.Deserialize<List<Question>>(JsonContext.Io);
+            list = array.Deserialize(JsonContext.QuestionListInfo);
         }
         catch (JsonException ex)
         {

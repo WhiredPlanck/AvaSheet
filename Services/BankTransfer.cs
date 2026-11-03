@@ -29,7 +29,7 @@ public sealed class BankTransfer
         try
         {
             bank = await JsonSerializer
-                .DeserializeAsync<QuestionBank>(stream, JsonContext.Io, ct)
+                .DeserializeAsync(stream, JsonContext.QuestionBankInfo, ct)
                 .ConfigureAwait(false);
         }
         catch (JsonException ex)
@@ -82,7 +82,7 @@ public sealed class BankTransfer
         var bank = await _store.LoadAsync(id, ct).ConfigureAwait(false)
                    ?? throw new FileNotFoundException("题库不存在，可能已被删除。");
 
-        await JsonSerializer.SerializeAsync(target, bank, JsonContext.Io, ct).ConfigureAwait(false);
+        await JsonSerializer.SerializeAsync(target, bank, JsonContext.QuestionBankInfo, ct).ConfigureAwait(false);
         await target.FlushAsync(ct).ConfigureAwait(false);
     }
 

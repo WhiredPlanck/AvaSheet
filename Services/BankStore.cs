@@ -86,7 +86,7 @@ public sealed class BankStore : IBankStore
             try
             {
                 var text = await File.ReadAllTextAsync(path, Encoding.UTF8, ct).ConfigureAwait(false);
-                var bank = JsonSerializer.Deserialize<QuestionBank>(text, JsonContext.Io);
+                var bank = JsonSerializer.Deserialize(text, JsonContext.QuestionBankInfo);
                 if (bank is null)
                 {
                     _unreadableFiles.Add(fileName);
@@ -124,7 +124,7 @@ public sealed class BankStore : IBankStore
         }
 
         var text = await File.ReadAllTextAsync(path, Encoding.UTF8, ct).ConfigureAwait(false);
-        var bank = JsonSerializer.Deserialize<QuestionBank>(text, JsonContext.Io)
+        var bank = JsonSerializer.Deserialize(text, JsonContext.QuestionBankInfo)
                    ?? throw new InvalidDataException($"题库文件为空：{Path.GetFileName(path)}");
 
         if (bank.SchemaVersion > QuestionBank.CurrentSchemaVersion)
@@ -231,7 +231,7 @@ public sealed class BankStore : IBankStore
         try
         {
             Directory.CreateDirectory(_directory);
-            var json = JsonSerializer.Serialize(bank, JsonContext.Io);
+            var json = JsonSerializer.Serialize(bank, JsonContext.QuestionBankInfo);
             await WriteAtomicAsync(path, json, ct).ConfigureAwait(false);
             _summaryCache.Remove(Path.GetFileName(path));
         }

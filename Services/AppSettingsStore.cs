@@ -38,7 +38,7 @@ public sealed class AppSettingsStore
             }
 
             var text = await File.ReadAllTextAsync(_path, Encoding.UTF8, ct).ConfigureAwait(false);
-            Current = JsonSerializer.Deserialize<AppSettings>(text, JsonContext.Io) ?? new AppSettings();
+            Current = JsonSerializer.Deserialize(text, JsonContext.AppSettingsInfo) ?? new AppSettings();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -54,7 +54,7 @@ public sealed class AppSettingsStore
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             var tmp = _path + ".tmp";
-            var json = JsonSerializer.Serialize(Current, JsonContext.Io);
+            var json = JsonSerializer.Serialize(Current, JsonContext.AppSettingsInfo);
             await File.WriteAllTextAsync(tmp, json, Utf8NoBom, ct).ConfigureAwait(false);
             File.Move(tmp, _path, overwrite: true);
         }
