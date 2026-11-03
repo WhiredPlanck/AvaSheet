@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
 
 namespace ExamSystem.Services;
@@ -13,25 +15,35 @@ public static class RenderMode
 {
     /// <summary>Windows：开启硬件加速时沿用 Avalonia 默认顺序，保留软件兜底。</summary>
     public static IReadOnlyList<Win32RenderingMode> Win32Modes(bool hardwareAcceleration)
-        => hardwareAcceleration
-            ? [Win32RenderingMode.AngleEgl, Win32RenderingMode.Software]
-            : [Win32RenderingMode.Software];
+        => Order(new Win32PlatformOptions().RenderingMode, Win32RenderingMode.Software, hardwareAcceleration);
 
     /// <summary>Linux：同上，默认先 GLX 再软件。</summary>
     public static IReadOnlyList<X11RenderingMode> X11Modes(bool hardwareAcceleration)
-        => hardwareAcceleration
-            ? [X11RenderingMode.Glx, X11RenderingMode.Software]
-            : [X11RenderingMode.Software];
+        => Order(new X11PlatformOptions().RenderingMode, X11RenderingMode.Software, hardwareAcceleration);
 
     /// <summary>macOS：同上，默认先 Metal 再 OpenGL 再软件。</summary>
     public static IReadOnlyList<AvaloniaNativeRenderingMode> NativeModes(bool hardwareAcceleration)
-        => hardwareAcceleration
-            ? [
-                AvaloniaNativeRenderingMode.Metal,
-                AvaloniaNativeRenderingMode.OpenGl,
-                AvaloniaNativeRenderingMode.Software,
-            ]
-            : [AvaloniaNativeRenderingMode.Software];
+        => Order(new AvaloniaNativePlatformOptions().RenderingMode, AvaloniaNativeRenderingMode.Software, hardwareAcceleration);
+
+    /// <summary>
+    /// 关闭时只留软件渲染；开启时沿用平台默认的硬件后端顺序，再把软件追加到末尾兜底。
+    /// 顺序从平台选项的默认值派生，Avalonia 调整默认列表时这里不会跟着漂移。
+    /// </summary>
+    private static IReadOnlyList<T> Order<T>(IReadOnlyList<T> defaults, T software, bool hardwareAcceleration)
+        where T : struct, Enum
+    {
+        if (!hardwareAcceleration)
+        {
+            return [software];
+        }
+
+        var hardware = defaults is null
+            ? Enumerable.Empty<T>()
+            : defaults.Where(mode => !EqualityComparer<T>.Default.Equals(mode, software));
+
+        // 平台的默认列表里本来就有软件兜底，去掉后重新追加，保证它排在最后。
+        return [.. hardware, software];
+    }
 
     /// <summary>
     /// 把渲染模式塞进 AppBuilder。三个平台的选项都会被注册，

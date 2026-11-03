@@ -87,31 +87,48 @@ public partial class App : Application
     {
         Console.WriteLine($"[Render] Requested = {(Program.HardwareAccelerationEnabled ? "hardware" : "software")}");
         Console.WriteLine($"[Render] RequestedSource = {(Program.RenderModeFromCommandLine ? "command-line" : "settings")}");
-        Console.WriteLine(GetPlatformGraphics() is { } graphics
-            ? $"[Render] Actual = hardware ({graphics.GetType().Name})"
-            : "[Render] Actual = software");
+
+        if (!TryGetPlatformGraphics(out var graphics))
+        {
+            // 反射失败不能说成软件渲染，否则升级 Avalonia 后排查会被误导。
+            Console.WriteLine("[Render] Actual = unknown (reflection failed)");
+            return;
+        }
+
+        Console.WriteLine(graphics is null
+            ? "[Render] Actual = software"
+            : $"[Render] Actual = hardware ({graphics.GetType().Name})");
     }
 
+    /// <summary>
+    /// 读取当前注册的 IPlatformGraphics。返回 false 表示反射本身失败（不是「没有注册」）。
+    /// </summary>
     [DynamicDependency("get_CurrentMutable", typeof(AvaloniaLocator))]
     [DynamicDependency("GetService", typeof(AvaloniaLocator))]
-    private static object? GetPlatformGraphics()
+    private static bool TryGetPlatformGraphics(out object? graphics)
     {
+        graphics = null;
+
         try
         {
             var locatorType = typeof(AvaloniaLocator);
             var resolver = locatorType
                 .GetProperty("CurrentMutable", BindingFlags.Public | BindingFlags.Static)?
                 .GetValue(null);
+            var getService = locatorType
+                .GetMethod("GetService", BindingFlags.Public | BindingFlags.Instance, null, [typeof(Type)], null);
 
-            return resolver is null
-                ? null
-                : locatorType
-                    .GetMethod("GetService", BindingFlags.Public | BindingFlags.Instance, null, [typeof(Type)], null)?
-                    .Invoke(resolver, [typeof(IPlatformGraphics)]);
+            if (resolver is null || getService is null)
+            {
+                return false;
+            }
+
+            graphics = getService.Invoke(resolver, [typeof(IPlatformGraphics)]);
+            return true;
         }
         catch (Exception ex) when (ex is TargetInvocationException or MissingMemberException or AmbiguousMatchException)
         {
-            return null;
+            return false;
         }
     }
 }

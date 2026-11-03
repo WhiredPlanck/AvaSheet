@@ -117,11 +117,20 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>本次启动的渲染方式由命令行指定，设置里的值只影响下次普通启动。</summary>
+    public bool RenderModeOverriddenByCommandLine => Program.RenderModeFromCommandLine;
+
     /// <summary>本次启动实际用的渲染方式与设置不一致。</summary>
-    public bool HasPendingRenderChange => HardwareAcceleration != Program.HardwareAccelerationEnabled;
+    public bool HasPendingRenderChange
+        => !RenderModeOverriddenByCommandLine
+            && HardwareAcceleration != Program.HardwareAccelerationEnabled;
 
     public string HardwareAccelerationMenuText
-        => HasPendingRenderChange ? "启用硬件加速（重启后生效）" : "启用硬件加速";
+        => RenderModeOverriddenByCommandLine
+            ? "启用硬件加速（本次由命令行指定）"
+            : HasPendingRenderChange
+                ? HardwareAcceleration ? "启用硬件加速（重启后生效）" : "软件渲染（重启后生效）"
+                : "启用硬件加速";
 
     private async Task ApplyRenderSettingAsync(bool enabled)
     {
@@ -131,47 +140,62 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        _settings.HardwareAcceleration = enabled;
-        await _settingsStore.SaveAsync();
-
-        if (!HasPendingRenderChange)
+        try
         {
-            StatusText = enabled ? "已启用硬件加速" : "已使用软件渲染";
-            return;
-        }
+            _settings.HardwareAcceleration = enabled;
+            await _settingsStore.SaveAsync();
 
-        if (_dialogs is null)
+            if (RenderModeOverriddenByCommandLine)
+            {
+                // 命令行定下了本次运行的渲染方式，再重启也还是它，不打扰用户。
+                StatusText = "渲染设置已保存，重启后按设置生效";
+                return;
+            }
+
+            if (!HasPendingRenderChange)
+            {
+                StatusText = enabled ? "已启用硬件加速" : "已使用软件渲染";
+                return;
+            }
+
+            if (_dialogs is null)
+            {
+                StatusText = "渲染设置已保存，重启后生效";
+                return;
+            }
+
+            var restart = await _dialogs.ConfirmAsync(
+                "需要重启",
+                enabled
+                    ? "硬件加速在程序启动时才会启用，重启后生效。现在重启吗？"
+                    : "软件渲染在程序启动时才会切换，重启后生效。现在重启吗？",
+                "立即重启");
+
+            if (!restart)
+            {
+                StatusText = "渲染设置已保存，重启后生效";
+                return;
+            }
+
+            if (!AppRestart.TryStartNewInstance())
+            {
+                StatusText = "无法自动重启，请手动关闭后重新打开";
+                return;
+            }
+
+            // 先把窗口状态落盘，再直接退出：绕开关窗时的考试确认。
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })
+            {
+                await SaveWindowStateAsync(window.WindowState == WindowState.Maximized);
+            }
+
+            Environment.Exit(0);
+        }
+        catch (Exception ex)
         {
-            StatusText = "渲染设置已保存，重启后生效";
-            return;
+            // 切换流程里的弹窗、写盘、启动新实例都可能失败，落到状态栏而不是静默丢弃。
+            StatusText = "渲染设置没有生效：" + ex.Message;
         }
-
-        var restart = await _dialogs.ConfirmAsync(
-            "需要重启",
-            enabled
-                ? "硬件加速在程序启动时才会启用，重启后生效。现在重启吗？"
-                : "软件渲染在程序启动时才会切换，重启后生效。现在重启吗？",
-            "立即重启");
-
-        if (!restart)
-        {
-            StatusText = "渲染设置已保存，重启后生效";
-            return;
-        }
-
-        if (!AppRestart.TryStartNewInstance())
-        {
-            StatusText = "无法自动重启，请手动关闭后重新打开";
-            return;
-        }
-
-        // 先把窗口状态落盘，再直接退出：绕开关窗时的考试确认。
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })
-        {
-            await SaveWindowStateAsync(window.WindowState == WindowState.Maximized);
-        }
-
-        Environment.Exit(0);
     }
 
     // ---------------------------------------------------------------- 沉浸式作答
