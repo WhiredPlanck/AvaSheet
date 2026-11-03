@@ -10,18 +10,17 @@ namespace ExamSystem;
 
 sealed class Program
 {
-    // 中文回退链，顺序即字形质量优先级。
-    // 目标机上缺哪个就静默跳过（字体名解析失败只是 continue），不会报错。
     internal static readonly string[] CjkFontCandidates =
-    {
+    [
         "Noto Sans CJK SC",
+        "Noto Sans SC",
         "Source Han Sans CN",
         "Source Han Sans SC",
-        "Noto Sans SC",
         "WenQuanYi Zen Hei",
         "文泉驿正黑",
-        "SimHei",
-    };
+        "DejaVu Sans",
+        "SimHei"
+    ];
 
     // 由 --font-diag 打开，App 启动后输出字体自检信息。
     internal static bool DumpFontDiagnostics { get; private set; }
