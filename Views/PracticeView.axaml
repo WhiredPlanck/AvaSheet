@@ -77,6 +77,98 @@
                 </StackPanel>
             </Border>
 
+            <!-- 起始页：选题型、选顺序 -->
+            <ScrollViewer IsVisible="{Binding IsSetup}"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel HorizontalAlignment="Stretch"
+                            Spacing="12">
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,12,0">
+                        <TextBlock Classes="muted"
+                                   Text="{Binding SetupSummaryText}"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Theme="{StaticResource LinkButtonTheme}"
+                                Content="清除全部进度"
+                                Command="{Binding ClearAllCommand}"
+                                IsVisible="{Binding HasAnyProgress}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding TypeCards}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PracticeTypeCardViewModel">
+                                <Border Classes="formPanel"
+                                        Padding="18"
+                                        MinHeight="186"
+                                        Margin="0,0,12,0">
+                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+                                          RowSpacing="10">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Border Classes="typeBadge" VerticalAlignment="Center">
+                                                <TextBlock Classes="typeBadgeText" Text="{Binding TypeShort}" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1"
+                                                       Classes="cardTitle"
+                                                       Margin="8,0,0,0"
+                                                       Text="{Binding TypeName}"
+                                                       VerticalAlignment="Center" />
+                                            <Button Grid.Column="2"
+                                                    Theme="{StaticResource LinkButtonTheme}"
+                                                    Content="清除进度"
+                                                    Command="{Binding ClearCommand}"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding ShowClearLink}" />
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="1"
+                                                   Classes="small"
+                                                   Text="{Binding CountText}" />
+
+                                        <ProgressBar Grid.Row="2"
+                                                     Classes="practice"
+                                                     Minimum="0"
+                                                     Maximum="1"
+                                                     Value="{Binding Progress}" />
+
+                                        <TextBlock Grid.Row="3"
+                                                   Classes="small"
+                                                   Text="{Binding ProgressText}" />
+
+                                        <StackPanel Grid.Row="5"
+                                                    Orientation="Horizontal"
+                                                    Spacing="8"
+                                                    IsVisible="{Binding ShowStartButtons}">
+                                            <Button Content="按顺序"
+                                                    Command="{Binding StartSequentialCommand}" />
+                                            <Button Classes="accent"
+                                                    Content="随机"
+                                                    Command="{Binding StartRandomCommand}" />
+                                        </StackPanel>
+
+                                        <Button Grid.Row="5"
+                                                Classes="accent"
+                                                Content="清除进度，重新开始"
+                                                Command="{Binding ClearCommand}"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Center"
+                                                IsVisible="{Binding IsComplete}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border Classes="notice" IsVisible="{Binding HasError}">
+                        <TextBlock Classes="noticeText" Text="{Binding ErrorMessage}" />
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
             <!-- 作答中：沉浸式，布局与模拟考试一致；没有倒计时和交卷 -->
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="12"
@@ -101,7 +193,7 @@
                         <Border Classes="pill">
                             <TextBlock Classes="pillText" Text="{Binding BankName}" />
                         </Border>
-                        <Border Classes="pill" IsVisible="{Binding IsWrongOnly}">
+                        <Border Classes="pill">
                             <TextBlock Classes="pillText" Text="{Binding RoundModeText}" />
                         </Border>
                     </StackPanel>
@@ -294,7 +386,7 @@
             <ScrollViewer IsVisible="{Binding IsFinished}"
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalContentAlignment="Center">
-                <StackPanel MaxWidth="620" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <StackPanel MaxWidth="700" HorizontalAlignment="Stretch" VerticalAlignment="Center">
                     <Border Classes="formPanel" Padding="28">
                         <StackPanel Spacing="10" HorizontalAlignment="Center">
                             <TextBlock Classes="small" Text="本轮正确率" HorizontalAlignment="Center" />
@@ -308,10 +400,16 @@
                                     CornerRadius="{DynamicResource ControlCornerRadiusSmall}"
                                     Padding="14,10"
                                     Margin="0,8,0,0">
-                                <TextBlock Classes="muted"
-                                           Text="{Binding WrongBookText}"
-                                           TextWrapping="Wrap"
-                                           TextAlignment="Center" />
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="muted"
+                                               Text="{Binding FinishedProgressText}"
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center" />
+                                    <TextBlock Classes="small"
+                                               Text="{Binding WrongBookText}"
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center" />
+                                </StackPanel>
                             </Border>
 
                             <Border Classes="notice"
@@ -327,6 +425,9 @@
                                 <Button Classes="accent"
                                         Content="{Binding RestartButtonText}"
                                         Command="{Binding RestartCommand}" />
+                                <Button Content="选择其他题型"
+                                        Command="{Binding SelectTypeCommand}"
+                                        IsVisible="{Binding !IsWrongOnly}" />
                                 <Button Content="{Binding WrongOnlyButtonText}"
                                         Command="{Binding PracticeWrongOnlyCommand}"
                                         IsVisible="{Binding ShowWrongOnlyButton}" />

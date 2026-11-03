@@ -51,6 +51,10 @@ public sealed class BankTransfer
         bank.Questions ??= [];
         NormalizeQuestions(bank);
 
+        // 题目 Id 会被重新编号，别人库里的错题本和练习进度在这里没有意义。
+        bank.WrongQuestionIds = [];
+        bank.PracticeProgress = [];
+
         var existing = await _store.ListAsync(ct).ConfigureAwait(false);
         var name = string.IsNullOrWhiteSpace(bank.Name) ? "导入的题库" : bank.Name.Trim();
         if (existing.Any(b => string.Equals(b.Name, name, StringComparison.CurrentCultureIgnoreCase)))

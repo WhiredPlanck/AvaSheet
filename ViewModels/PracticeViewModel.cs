@@ -20,6 +20,9 @@ public enum PracticePhase
     /// <summary>没有题库，或题库里没有题目。</summary>
     Empty,
 
+    /// <summary>选题型、选顺序的起始页。</summary>
+    Setup,
+
     /// <summary>正在逐题作答。</summary>
     Running,
 
@@ -28,7 +31,11 @@ public enum PracticePhase
 }
 
 /// <summary>
-/// 平时练习：把当前题库的题目随机打乱，逐题作答、即时判定、顺手记错题。
+/// 平时练习：按题型一轮一轮地刷题，逐题作答、即时判定、顺手记错题。
+///
+/// 进入时先选题型和顺序（按题库顺序 / 随机），做过的题会记在题库文件的
+/// practiceProgress 里，下一次接着做没做过的；清除进度或用「再练一轮」
+/// 就从头开始。
 ///
 /// 单选题和判断题点一下选项就直接判；多选题选完再点「提交答案」。
 /// 错题本存在题库文件的 wrongQuestionIds 里，答对后自动移出，
@@ -46,6 +53,14 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     private readonly HashSet<string> _wrongIds = new(StringComparer.Ordinal);
     private readonly List<Question> _queue = [];
 
+    /// <summary>每个题型已经做完的题目 Id，落盘到题库文件的 practiceProgress。</summary>
+    private readonly Dictionary<QuestionType, HashSet<string>> _done = new()
+    {
+        [QuestionType.SingleChoice] = new(StringComparer.Ordinal),
+        [QuestionType.MultipleChoice] = new(StringComparer.Ordinal),
+        [QuestionType.TrueFalse] = new(StringComparer.Ordinal),
+    };
+
     /// <summary>本轮每道题的判定结果：true = 答对。答题卡据此上色。</summary>
     private readonly Dictionary<string, bool> _results = new(StringComparer.Ordinal);
 
@@ -55,6 +70,12 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     private bool _initialized;
     private bool _wrongOnlyRound;
     private bool _dirty;
+
+    /// <summary>本轮练的题型。</summary>
+    private QuestionType _roundType = QuestionType.SingleChoice;
+
+    /// <summary>本轮是不是按题库顺序（false 表示随机）。</summary>
+    private bool _sequential;
 
     /// <summary>供 XAML 预览器使用。</summary>
     public PracticeViewModel()
@@ -83,6 +104,9 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
 
     public ObservableCollection<PracticeOptionViewModel> Options { get; } = [];
 
+    /// <summary>起始页的三个题型卡片。</summary>
+    public ObservableCollection<PracticeTypeCardViewModel> TypeCards { get; } = [];
+
     /// <summary>右侧答题卡：本轮每道题的位置与对错，只用于展示，不能跳题。</summary>
     public ObservableCollection<PracticeNavItemViewModel> Navigator { get; } = [];
 
@@ -98,7 +122,8 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         : Phase switch
         {
             PracticePhase.Empty => "当前题库还没有题目，先去「管理题目」添加几道。",
-            PracticePhase.Finished => "这一轮做完了，看看哪些还没掌握。",
+            PracticePhase.Setup => "选择题型和顺序；做过的题会记住，下次接着做没做的。",
+            PracticePhase.Finished => "这一轮做完了；可以接着做没做的题，也可以换一种题型。",
             _ => "逐题作答、即时判定，做错的题会自动进错题本。",
         };
 
@@ -128,12 +153,27 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
 
     public bool IsEmpty => Phase == PracticePhase.Empty;
 
+    public bool IsSetup => Phase == PracticePhase.Setup;
+
     public bool IsRunning => Phase == PracticePhase.Running;
 
     public bool IsFinished => Phase == PracticePhase.Finished;
 
     /// <summary>作答中隐藏主窗口的顶栏和状态栏。</summary>
     public bool IsAnswering => Phase == PracticePhase.Running;
+
+    // ---------------------------------------------------------------- 起始页
+
+    public int TotalQuestions => _bank?.Questions.Count ?? 0;
+
+    /// <summary>三个题型加起来已经做完的题数。</summary>
+    public int TotalDone => _done.Values.Sum(set => set.Count);
+
+    public bool HasAnyProgress => TotalDone > 0;
+
+    public string SetupSummaryText => TotalQuestions == 0
+        ? ""
+        : $"已练习 {TotalDone} / {TotalQuestions} 题";
 
     // ---------------------------------------------------------------- 当前题目
 
@@ -211,10 +251,32 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
 
     public string NextButtonText => _index + 1 >= Total ? "查看结果" : "下一题";
 
-    public string RoundModeText => _wrongOnlyRound ? "错题模式" : "随机顺序";
+    public string RoundModeText => _wrongOnlyRound
+        ? "错题模式"
+        : $"{_roundType.ToLabel()} · {(_sequential ? "按顺序" : "随机顺序")}";
 
     /// <summary>本轮是不是只练错题。</summary>
     public bool IsWrongOnly => _wrongOnlyRound;
+
+    /// <summary>成绩页上说明这一题型的整体进度。</summary>
+    public string FinishedProgressText
+    {
+        get
+        {
+            if (_wrongBookEntry)
+            {
+                return WrongBookCount == 0
+                    ? "错题本已经清空了。"
+                    : $"错题本里还有 {WrongBookCount} 道题。";
+            }
+
+            var total = _bank?.Questions.Count(q => q.Type == _roundType) ?? 0;
+            var done = _done.TryGetValue(_roundType, out var set) ? set.Count : 0;
+            return done >= total
+                ? $"{_roundType.ToLabel()}已全部做完，再来一轮会从头开始。"
+                : $"{_roundType.ToLabel()}已完成 {done} / {total} 题。";
+        }
+    }
 
     // ---------------------------------------------------------------- 成绩
 
@@ -249,7 +311,29 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     /// <summary>已经在错题模式里时，不再重复显示「只练错题」。</summary>
     public bool ShowWrongOnlyButton => HasWrongBook && !IsWrongOnly;
 
-    public string RestartButtonText => _wrongBookEntry ? "再练错题" : "再练一轮";
+    public string RestartButtonText
+    {
+        get
+        {
+            if (_wrongBookEntry)
+            {
+                return "再练错题";
+            }
+
+            return IsRoundComplete ? "再练一轮" : "继续练习";
+        }
+    }
+
+    /// <summary>这一题型里已经没有没做过的题了。</summary>
+    private bool IsRoundComplete
+    {
+        get
+        {
+            var total = _bank?.Questions.Count(q => q.Type == _roundType) ?? 0;
+            var done = _done.TryGetValue(_roundType, out var set) ? set.Count : 0;
+            return total > 0 && done >= total;
+        }
+    }
 
     /// <summary>空状态文案随入口变化。</summary>
     public string EmptyTitle => _wrongBookEntry && _bank is not null
@@ -267,6 +351,36 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
 
     [RelayCommand]
     private void OpenPractice() => _openPractice?.Invoke();
+
+    /// <summary>成绩页回到题型选择。</summary>
+    [RelayCommand]
+    private async Task SelectTypeAsync()
+    {
+        await PersistAsync();
+        BuildTypeCards();
+        Phase = PracticePhase.Setup;
+        NotifyAll();
+    }
+
+    /// <summary>清空全部题型的练习进度。</summary>
+    [RelayCommand]
+    private async Task ClearAllAsync()
+    {
+        if (_bank is null || !HasAnyProgress)
+        {
+            return;
+        }
+
+        foreach (var set in _done.Values)
+        {
+            set.Clear();
+        }
+
+        _dirty = true;
+        await PersistAsync();
+        BuildTypeCards();
+        NotifyAll();
+    }
 
     // ---------------------------------------------------------------- 加载
 
@@ -308,10 +422,85 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         _wrongIds.UnionWith(_bank.WrongQuestionIds);
         _wrongIds.RemoveWhere(id => _bank.Questions.All(q => q.Id != id));
 
-        StartRound(wrongOnly: _wrongBookEntry);
+        LoadProgress(_bank);
+
+        if (_wrongBookEntry)
+        {
+            StartRound(wrongOnly: true);
+            return;
+        }
+
+        BuildTypeCards();
+        Phase = PracticePhase.Setup;
+        NotifyAll();
     }
 
-    /// <summary>开始一轮：题库全部题目，或者只练错题，顺序都随机打乱。</summary>
+    /// <summary>把题库里记下的练习进度读进来，顺手丢掉已经不存在或换了题型的 Id。</summary>
+    private void LoadProgress(QuestionBank bank)
+    {
+        foreach (var entry in bank.PracticeProgress)
+        {
+            if (_done.TryGetValue(entry.Type, out var set))
+            {
+                set.UnionWith(entry.DoneIds);
+            }
+        }
+
+        var alive = bank.Questions
+            .Select(q => (q.Id, q.Type))
+            .ToHashSet();
+
+        foreach (var (type, set) in _done)
+        {
+            set.RemoveWhere(id => !alive.Contains((id, type)));
+        }
+    }
+
+    private void BuildTypeCards()
+    {
+        TypeCards.Clear();
+
+        if (_bank is null)
+        {
+            return;
+        }
+
+        foreach (var type in new[] { QuestionType.SingleChoice, QuestionType.MultipleChoice, QuestionType.TrueFalse })
+        {
+            var total = _bank.Questions.Count(q => q.Type == type);
+            TypeCards.Add(new PracticeTypeCardViewModel(this, type, total, _done[type].Count));
+        }
+    }
+
+    /// <summary>从起始页进入某一题型的一轮练习。</summary>
+    internal void StartType(QuestionType type, bool sequential)
+    {
+        if (_bank is null)
+        {
+            return;
+        }
+
+        _roundType = type;
+        _sequential = sequential;
+        StartRound(wrongOnly: false);
+    }
+
+    /// <summary>清掉一个题型的练习进度。</summary>
+    internal async Task ClearTypeAsync(QuestionType type)
+    {
+        if (_bank is null || !_done.TryGetValue(type, out var set) || set.Count == 0)
+        {
+            return;
+        }
+
+        set.Clear();
+        _dirty = true;
+        await PersistAsync().ConfigureAwait(true);
+        BuildTypeCards();
+        NotifyAll();
+    }
+
+    /// <summary>开始一轮：某一题型里还没做过的题目，按顺序或者随机。</summary>
     private void StartRound(bool wrongOnly)
     {
         if (_bank is null)
@@ -320,17 +509,37 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         }
 
         _queue.Clear();
-        var source = wrongOnly
-            ? _bank.Questions.Where(q => _wrongIds.Contains(q.Id))
-            : _bank.Questions;
 
-        _queue.AddRange(source.OrderBy(_ => Random.Shared.Next()));
+        if (wrongOnly)
+        {
+            _queue.AddRange(_bank.Questions
+                .Where(q => _wrongIds.Contains(q.Id))
+                .OrderBy(_ => Random.Shared.Next()));
+        }
+        else
+        {
+            var done = _done[_roundType];
+            var remaining = _bank.Questions
+                .Where(q => q.Type == _roundType && !done.Contains(q.Id));
+
+            _queue.AddRange(_sequential ? remaining : remaining.OrderBy(_ => Random.Shared.Next()));
+        }
 
         if (_queue.Count == 0)
         {
-            // 从「错题本」卡片进来时，空状态面板本身已经说明情况，不用再报错。
-            ErrorMessage = _wrongBookEntry ? null : "错题本是空的，先做一轮完整练习吧。";
-            Phase = PracticePhase.Empty;
+            if (wrongOnly)
+            {
+                // 从「错题本」卡片进来时，空状态面板本身已经说明情况，不用再报错。
+                ErrorMessage = _wrongBookEntry ? null : "错题本是空的，先做一轮完整练习吧。";
+                Phase = PracticePhase.Empty;
+            }
+            else
+            {
+                ErrorMessage = $"{_roundType.ToLabel()}已经做完了，清除进度后再开始新一轮。";
+                BuildTypeCards();
+                Phase = PracticePhase.Setup;
+            }
+
             NotifyAll();
             return;
         }
@@ -479,6 +688,13 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         }
 
         _results[question.Id] = IsCorrectAnswer;
+
+        // 错题模式不动练习进度，它只是临时刷一遍。
+        if (!_wrongOnlyRound && _done.TryGetValue(_roundType, out var doneSet))
+        {
+            doneSet.Add(question.Id);
+        }
+
         _dirty = true;
         RefreshNavigator();
         NotifyAll();
@@ -517,8 +733,21 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         NotifyAll();
     }
 
+    /// <summary>
+    /// 再来一轮。这一题型全做完时清掉进度从头开始；还有没做的就继续做剩下的。
+    /// 错题本则重新抽一遍当前的错题。
+    /// </summary>
     [RelayCommand]
-    private void Restart() => StartRound(wrongOnly: _wrongBookEntry);
+    private void Restart()
+    {
+        if (!_wrongBookEntry && IsRoundComplete && _done.TryGetValue(_roundType, out var done))
+        {
+            done.Clear();
+            _dirty = true;
+        }
+
+        StartRound(wrongOnly: _wrongBookEntry);
+    }
 
     [RelayCommand]
     private void PracticeWrongOnly()
@@ -551,6 +780,15 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         {
             var alive = _bank.Questions.Select(q => q.Id).ToHashSet(StringComparer.Ordinal);
             _bank.WrongQuestionIds = [.. _wrongIds.Where(alive.Contains)];
+            _bank.PracticeProgress = _done
+                .Where(pair => pair.Value.Count > 0)
+                .OrderBy(pair => pair.Key)
+                .Select(pair => new PracticeProgressEntry
+                {
+                    Type = pair.Key,
+                    DoneIds = [.. pair.Value.Where(alive.Contains)],
+                })
+                .ToList();
             await _store.SaveAsync(_bank);
             _dirty = false;
             ErrorMessage = null;
@@ -593,6 +831,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     {
         OnPropertyChanged(nameof(IsLoading));
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(IsSetup));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(IsFinished));
         OnPropertyChanged(nameof(IsAnswering));
@@ -627,6 +866,11 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         OnPropertyChanged(nameof(EmptyHint));
         OnPropertyChanged(nameof(ShowPracticeShortcut));
         OnPropertyChanged(nameof(RestartButtonText));
+        OnPropertyChanged(nameof(FinishedProgressText));
+        OnPropertyChanged(nameof(TotalQuestions));
+        OnPropertyChanged(nameof(TotalDone));
+        OnPropertyChanged(nameof(HasAnyProgress));
+        OnPropertyChanged(nameof(SetupSummaryText));
         NotifyStats();
     }
 
@@ -717,4 +961,59 @@ public sealed partial class PracticeNavItemViewModel : ObservableObject
         IsCorrect = isCorrect;
         OnPropertyChanged(nameof(IsWrong));
     }
+}
+
+/// <summary>练习起始页上的一张题型卡片。</summary>
+public sealed class PracticeTypeCardViewModel : ObservableObject
+{
+    public PracticeTypeCardViewModel(PracticeViewModel owner, QuestionType type, int total, int done)
+    {
+        Type = type;
+        Total = total;
+        DoneCount = done;
+        StartSequentialCommand = new RelayCommand(() => owner.StartType(Type, sequential: true));
+        StartRandomCommand = new RelayCommand(() => owner.StartType(Type, sequential: false));
+        ClearCommand = new AsyncRelayCommand(() => owner.ClearTypeAsync(Type));
+    }
+
+    public QuestionType Type { get; }
+
+    public string TypeName => Type.ToLabel();
+
+    public string TypeShort => Type.ToShortLabel();
+
+    public int Total { get; }
+
+    public int DoneCount { get; }
+
+    public int Remaining => Math.Max(0, Total - DoneCount);
+
+    public double Progress => Total == 0 ? 0 : (double)DoneCount / Total;
+
+    public bool HasQuestions => Total > 0;
+
+    public bool HasProgress => DoneCount > 0;
+
+    /// <summary>这一题型已经没有没做过的题了。</summary>
+    public bool IsComplete => Total > 0 && Remaining == 0;
+
+    public bool ShowStartButtons => HasQuestions && !IsComplete;
+
+    public bool ShowClearLink => HasProgress && !IsComplete;
+
+    public string CountText => HasQuestions ? $"共 {Total} 题" : "题库里暂时没有这个题型";
+
+    public string ProgressText => !HasQuestions
+        ? ""
+        : IsComplete
+            ? "已全部完成"
+            : DoneCount == 0
+                ? "还没开始"
+                : $"已完成 {DoneCount} / {Total}";
+
+    public IRelayCommand StartSequentialCommand { get; }
+
+    public IRelayCommand StartRandomCommand { get; }
+
+    public IAsyncRelayCommand ClearCommand { get; }
 }

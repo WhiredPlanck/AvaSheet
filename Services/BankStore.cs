@@ -136,6 +136,7 @@ public sealed class BankStore : IBankStore
         bank.Id = id;
         bank.Questions ??= [];
         bank.WrongQuestionIds ??= [];
+        bank.PracticeProgress ??= [];
         return bank;
     }
 
@@ -216,6 +217,7 @@ public sealed class BankStore : IBankStore
         bank.Name = ValidateName(bank.Name);
         bank.Questions ??= [];
         bank.WrongQuestionIds ??= [];
+        bank.PracticeProgress ??= [];
         bank.SchemaVersion = QuestionBank.CurrentSchemaVersion;
         bank.UpdatedAt = DateTimeOffset.Now;
         if (bank.CreatedAt == default)
