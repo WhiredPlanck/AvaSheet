@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -93,6 +94,86 @@ public partial class MainViewModel : ViewModelBase
 
     public bool StartMaximized { get; private set; }
 
+    // ---------------------------------------------------------------- 渲染设置
+
+    private bool _hardwareAcceleration;
+
+    /// <summary>
+    /// 是否启用硬件加速。写进 settings.json，下次启动生效。
+    /// 与本次启动实际使用的模式不同时，菜单文字会提示需要重启。
+    /// </summary>
+    public bool HardwareAcceleration
+    {
+        get => _hardwareAcceleration;
+        set
+        {
+            if (!SetProperty(ref _hardwareAcceleration, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(HardwareAccelerationMenuText));
+            _ = ApplyRenderSettingAsync(value);
+        }
+    }
+
+    /// <summary>本次启动实际用的渲染方式与设置不一致。</summary>
+    public bool HasPendingRenderChange => HardwareAcceleration != Program.HardwareAccelerationEnabled;
+
+    public string HardwareAccelerationMenuText
+        => HasPendingRenderChange ? "启用硬件加速（重启后生效）" : "启用硬件加速";
+
+    private async Task ApplyRenderSettingAsync(bool enabled)
+    {
+        // 启动时从设置里回填不加提示，也不重复写盘。
+        if (!_initialized || _suspendSettingsSave)
+        {
+            return;
+        }
+
+        _settings.HardwareAcceleration = enabled;
+        await _settingsStore.SaveAsync();
+
+        if (!HasPendingRenderChange)
+        {
+            StatusText = enabled ? "已启用硬件加速" : "已使用软件渲染";
+            return;
+        }
+
+        if (_dialogs is null)
+        {
+            StatusText = "渲染设置已保存，重启后生效";
+            return;
+        }
+
+        var restart = await _dialogs.ConfirmAsync(
+            "需要重启",
+            enabled
+                ? "硬件加速在程序启动时才会启用，重启后生效。现在重启吗？"
+                : "软件渲染在程序启动时才会切换，重启后生效。现在重启吗？",
+            "立即重启");
+
+        if (!restart)
+        {
+            StatusText = "渲染设置已保存，重启后生效";
+            return;
+        }
+
+        if (!AppRestart.TryStartNewInstance())
+        {
+            StatusText = "无法自动重启，请手动关闭后重新打开";
+            return;
+        }
+
+        // 先把窗口状态落盘，再直接退出：绕开关窗时的考试确认。
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })
+        {
+            await SaveWindowStateAsync(window.WindowState == WindowState.Maximized);
+        }
+
+        Environment.Exit(0);
+    }
+
     // ---------------------------------------------------------------- 沉浸式作答
 
     partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
@@ -128,6 +209,11 @@ public partial class MainViewModel : ViewModelBase
     {
         _settings = await _settingsStore.LoadAsync();
         StartMaximized = _settings.IsWindowMaximized;
+
+        // 回填开关当前的持久化值（这次运行实际用的模式是启动时定下的，可能不同）。
+        _suspendSettingsSave = true;
+        HardwareAcceleration = _settings.HardwareAcceleration;
+        _suspendSettingsSave = false;
 
         await ReloadBanksAsync(_settings.LastBankId);
         _initialized = true;

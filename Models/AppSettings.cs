@@ -8,4 +8,10 @@ public sealed class AppSettings
 
     /// <summary>主窗口是否最大化。</summary>
     public bool IsWindowMaximized { get; set; }
+
+    /// <summary>
+    /// 是否启用硬件加速。默认 false，用软件渲染：有的显卡能初始化成功但跑一阵会卡死，
+    /// 那种情况 Avalonia 回退不了。改动在下次启动时生效。
+    /// </summary>
+    public bool HardwareAcceleration { get; set; }
 }

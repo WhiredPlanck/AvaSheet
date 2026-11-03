@@ -76,6 +76,11 @@
                         VerticalAlignment="Center">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuItem Header="{Binding HardwareAccelerationMenuText}"
+                                      ToggleType="CheckBox"
+                                      IsChecked="{Binding HardwareAcceleration, Mode=TwoWay}"
+                                      ToolTip.Tip="默认关闭，用软件渲染。开启后使用显卡加速，切换后需要重启程序。" />
+                            <Separator />
                             <MenuItem Header="关于" Command="{Binding AboutCommand}" />
                             <Separator />
                             <MenuItem Header="退出" Command="{Binding ExitCommand}" />
