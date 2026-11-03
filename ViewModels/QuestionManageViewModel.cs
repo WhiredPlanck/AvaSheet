@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ExamSystem.Models;
@@ -315,38 +316,119 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
             return;
         }
 
-        var file = await _dialogs.PickImportFileAsync();
+        var file = await _dialogs.PickQuestionImportFileAsync();
         if (file is null)
         {
             return;
         }
 
+        ImportResultViewModel? result = null;
+
         await RunAsync(async () =>
         {
             await using var stream = await file.OpenReadAsync();
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-            var json = await reader.ReadToEndAsync();
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            buffer.Position = 0;
 
-            var imported = ParseQuestions(json);
-            if (imported.Count == 0)
-            {
-                throw new InvalidDataException("文件里没有可导入的题目。");
-            }
-
-            var existing = new HashSet<string>(_all.Select(q => q.Id), StringComparer.Ordinal);
-            foreach (var question in imported)
-            {
-                if (string.IsNullOrWhiteSpace(question.Id) || !existing.Add(question.Id))
-                {
-                    question.Id = NewQuestionId();
-                    existing.Add(question.Id);
-                }
-
-                _all.Add(question);
-            }
-
-            await PersistAsync();
+            result = await ImportFromStreamAsync(buffer, file.Name);
         });
+
+        if (result is not null && _dialogs is not null)
+        {
+            await _dialogs.ShowImportResultAsync(result);
+        }
+    }
+
+    /// <summary>
+    /// 从已打开的流导入，返回结果窗的数据；整份文件读不出来时抛异常，由调用方转成页面提示。
+    /// </summary>
+    public async Task<ImportResultViewModel?> ImportFromStreamAsync(Stream stream, string? fileName)
+    {
+        var preview = await ReadImportFileAsync(stream, fileName);
+        if (preview.Questions.Count == 0 && preview.Errors.Count == 0)
+        {
+            throw new InvalidDataException(
+                preview.IsExcel ? "表格里没有可导入的题目。" : "文件里没有可导入的题目。");
+        }
+
+        var existing = new HashSet<string>(_all.Select(q => q.Id), StringComparer.Ordinal);
+        foreach (var question in preview.Questions)
+        {
+            if (string.IsNullOrWhiteSpace(question.Id) || !existing.Add(question.Id))
+            {
+                question.Id = NewQuestionId();
+                existing.Add(question.Id);
+            }
+
+            _all.Add(question);
+        }
+
+        await PersistAsync();
+
+        if (HasError)
+        {
+            // 写入失败时原因已经在页底了，不再弹结果窗。
+            return null;
+        }
+
+        SearchText = "";
+        Filter = QuestionFilterKind.All;
+
+        return new ImportResultViewModel(preview.Questions.Count, preview.Errors);
+    }
+
+    private sealed record ImportPreview(
+        IReadOnlyList<Question> Questions,
+        IReadOnlyList<ExcelRowError> Errors,
+        bool IsExcel);
+
+    private static async Task<ImportPreview> ReadImportFileAsync(Stream stream, string? fileName)
+    {
+        var isExcel = await IsExcelFileAsync(stream, fileName);
+
+        if (!isExcel)
+        {
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            var json = await reader.ReadToEndAsync();
+            return new ImportPreview(ParseQuestions(json), [], false);
+        }
+
+        var excel = QuestionExcelReader.Read(stream);
+        return new ImportPreview(excel.Questions, excel.Errors, true);
+    }
+
+    private static async Task<bool> IsExcelFileAsync(Stream stream, string? fileName)
+    {
+        if (fileName is not null)
+        {
+            if (fileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase)
+                && !fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    "不支持老式 .xls 文件。请在 Excel 或 WPS 里另存为 .xlsx 再导入。");
+            }
+
+            if (fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        // 扩展名不认识时看文件头：xlsx 就是一个 zip 包。
+        var head = new byte[2];
+        var read = await stream.ReadAsync(head);
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
+
+        return read == 2 && head[0] == 'P' && head[1] == 'K';
     }
 
     [RelayCommand]

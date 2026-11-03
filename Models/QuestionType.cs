@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace ExamSystem.Models;
 
 /// <summary>题目类型。</summary>
@@ -31,4 +33,33 @@ public static class QuestionTypeExtensions
         QuestionType.TrueFalse => "判断",
         _ => "题目",
     };
+
+    /// <summary>
+    /// 从表格里的写法认出题型，允许中英文与简写。
+    /// </summary>
+    public static bool TryParseLabel(string? text, out QuestionType type)
+    {
+        type = QuestionType.SingleChoice;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var value = new string(text.Where(ch => !char.IsWhiteSpace(ch)).ToArray()).ToLowerInvariant();
+
+        switch (value)
+        {
+            case "单选题" or "单选" or "单项选择" or "单项选择题" or "singlechoice" or "single":
+                type = QuestionType.SingleChoice;
+                return true;
+            case "多选题" or "多选" or "多项选择" or "多项选择题" or "multiplechoice" or "multiple":
+                type = QuestionType.MultipleChoice;
+                return true;
+            case "判断题" or "判断" or "是非题" or "truefalse" or "t" or "f":
+                type = QuestionType.TrueFalse;
+                return true;
+            default:
+                return false;
+        }
+    }
 }

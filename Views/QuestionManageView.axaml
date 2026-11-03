@@ -47,7 +47,7 @@
                         Spacing="10"
                         VerticalAlignment="Bottom">
                 <Button Command="{Binding ImportQuestionsCommand}"
-                        ToolTip.Tip="从 JSON 文件导入题目">
+                        ToolTip.Tip="从 JSON 或 Excel 文件导入题目">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                         <PathIcon Data="{StaticResource IconImport}" Width="15" Height="15" />
                         <TextBlock Text="导入题目" VerticalAlignment="Center" />

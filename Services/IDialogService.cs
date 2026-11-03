@@ -26,6 +26,12 @@ public interface IDialogService
     /// <summary>选一个要导入的 JSON 文件。</summary>
     Task<IStorageFile?> PickImportFileAsync();
 
+    /// <summary>选一个要导入的题目文件，可选 JSON 或 Excel。</summary>
+    Task<IStorageFile?> PickQuestionImportFileAsync();
+
+    /// <summary>显示导入结果的明细窗。</summary>
+    Task ShowImportResultAsync(ImportResultViewModel viewModel);
+
     /// <summary>选导出目标，返回 null 表示用户取消。</summary>
     Task<IStorageFile?> PickExportFileAsync(string suggestedFileName);
 }

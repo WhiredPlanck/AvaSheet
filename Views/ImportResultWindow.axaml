@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ExamSystem.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="300"
+        x:Class="ExamSystem.Views.ImportResultWindow"
+        x:DataType="vm:ImportResultViewModel"
+        Title="{Binding Title}"
+        Width="520"
+        SizeToContent="Height"
+        MaxHeight="560"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+    <StackPanel Margin="24" Spacing="14">
+
+        <TextBlock FontSize="16"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   Text="{Binding SummaryText}" />
+
+        <TextBlock Classes="muted"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasErrors}"
+                   Text="{Binding HintText}" />
+
+        <ScrollViewer MaxHeight="320"
+                      IsVisible="{Binding HasErrors}"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Errors}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ImportErrorRowViewModel">
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="10"
+                              Margin="0,0,0,6">
+                            <TextBlock Classes="pillText"
+                                       Foreground="{DynamicResource DangerBrush}"
+                                       Text="{Binding RowText}" />
+                            <TextBlock Grid.Column="1"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding Message}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Button Classes="accent"
+                Content="关闭"
+                Click="OnClose"
+                HorizontalAlignment="Right"
+                MinWidth="84" />
+    </StackPanel>
+</Window>

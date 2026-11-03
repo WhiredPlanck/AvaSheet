@@ -18,6 +18,12 @@ public sealed class DialogService : IDialogService
         MimeTypes = ["application/json"],
     };
 
+    private static readonly FilePickerFileType QuestionFileType = new("题目文件")
+    {
+        Patterns = ["*.json", "*.xlsx"],
+        MimeTypes = ["application/json", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    };
+
     private readonly Window _owner;
 
     public DialogService(Window owner)
@@ -86,5 +92,23 @@ public sealed class DialogService : IDialogService
             FileTypeChoices = [BankJsonType],
             ShowOverwritePrompt = true,
         });
+    }
+
+    public async Task<IStorageFile?> PickQuestionImportFileAsync()
+    {
+        var files = await _owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "导入题目",
+            AllowMultiple = false,
+            FileTypeFilter = [QuestionFileType],
+        });
+
+        return files.Count > 0 ? files[0] : null;
+    }
+
+    public Task ShowImportResultAsync(ImportResultViewModel viewModel)
+    {
+        var dialog = new ImportResultWindow { DataContext = viewModel };
+        return dialog.ShowDialog(_owner);
     }
 }
