@@ -12,11 +12,7 @@ namespace ExamSystem.Models;
 /// </remarks>
 public sealed class QuestionBank
 {
-    /// <summary>
-    /// 当前程序能读写的格式版本。v2 起多出错题本，v3 起多出练习进度，
-    /// v4 起这两样移出题库文件、改存 progress/{bankId}.json；
-    /// 旧文件里多出来的字段读进来会被忽略，首次打开时迁移过去。
-    /// </summary>
+    /// <summary>当前程序写出的格式版本。用户数据（错题本、练习进度）不在题库文件里。</summary>
     public const int CurrentSchemaVersion = 4;
 
     /// <summary>
