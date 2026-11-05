@@ -342,6 +342,9 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
 
     /// <summary>
     /// 从已打开的流导入，返回结果窗的数据；整份文件读不出来时抛异常，由调用方转成页面提示。
+    ///
+    /// 判重按「题型 + 归一化题干」而不是 Id：Excel 里没有 Id，JSON 里的 Id 每次导出都可能不同，
+    /// 只看 Id 会让同一张表重复导入后题目翻倍。
     /// </summary>
     public async Task<ImportResultViewModel?> ImportFromStreamAsync(Stream stream, string? fileName)
     {
@@ -352,18 +355,42 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
                 preview.IsExcel ? "表格里没有可导入的题目。" : "文件里没有可导入的题目。");
         }
 
-        var existing = new HashSet<string>(_all.Select(q => q.Id), StringComparer.Ordinal);
+        var existingIds = new HashSet<string>(_all.Select(q => q.Id), StringComparer.Ordinal);
+        var contentKeys = new HashSet<string>(_all.Select(ContentKey), StringComparer.Ordinal);
+
+        var fresh = new List<Question>(preview.Questions.Count);
         foreach (var question in preview.Questions)
         {
-            if (string.IsNullOrWhiteSpace(question.Id) || !existing.Add(question.Id))
+            if (!contentKeys.Add(ContentKey(question)))
             {
-                question.Id = NewQuestionId();
-                existing.Add(question.Id);
+                // 与题库已有题目、或本批前面某道题的内容相同。
+                continue;
             }
 
-            _all.Add(question);
+            if (string.IsNullOrWhiteSpace(question.Id) || !existingIds.Add(question.Id))
+            {
+                question.Id = NewQuestionId();
+                existingIds.Add(question.Id);
+            }
+
+            fresh.Add(question);
         }
 
+        var duplicateCount = preview.Questions.Count - fresh.Count;
+
+        if (fresh.Count == 0)
+        {
+            // 全是重复题时不用再问一次「确定导入吗」。
+            return new ImportResultViewModel(0, preview.Errors, duplicateCount);
+        }
+
+        if (_dialogs is not null
+            && !await _dialogs.ConfirmAsync("导入题目", BuildPreviewText(preview, fresh.Count, duplicateCount), "开始导入"))
+        {
+            return null;
+        }
+
+        _all.AddRange(fresh);
         await PersistAsync();
 
         if (HasError)
@@ -375,7 +402,65 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
         SearchText = "";
         Filter = QuestionFilterKind.All;
 
-        return new ImportResultViewModel(preview.Questions.Count, preview.Errors);
+        return new ImportResultViewModel(fresh.Count, preview.Errors, duplicateCount);
+    }
+
+    /// <summary>导入前的摘要：能进来几道、跳过多少，确认后才写盘。</summary>
+    private static string BuildPreviewText(ImportPreview preview, int freshCount, int duplicateCount)
+    {
+        var lines = new List<string>
+        {
+            preview.IsExcel
+                ? $"表格里识别出 {preview.Questions.Count} 道题，可以导入 {freshCount} 道。"
+                : $"文件里有 {preview.Questions.Count} 道题，可以导入 {freshCount} 道。",
+        };
+
+        if (duplicateCount > 0)
+        {
+            lines.Add($"{duplicateCount} 道与题库已有题目重复，会跳过。");
+        }
+
+        if (preview.Errors.Count > 0)
+        {
+            lines.Add($"{preview.Errors.Count} 行无法识别，会跳过。");
+        }
+
+        lines.Add("导入后会追加到当前题库末尾。");
+        return string.Join("\n", lines);
+    }
+
+    /// <summary>判重用的内容键：题型 + 归一化题干。</summary>
+    internal static string ContentKey(Question question)
+        => $"{(int)question.Type}|{NormalizeStem(question.Stem)}";
+
+    /// <summary>合并连续空白、去掉首尾空白、忽略大小写，避免「只差空格」被判成两道题。</summary>
+    private static string NormalizeStem(string? stem)
+    {
+        if (string.IsNullOrWhiteSpace(stem))
+        {
+            return "";
+        }
+
+        var builder = new StringBuilder(stem.Length);
+        var lastWasSpace = false;
+        foreach (var ch in stem.AsSpan().Trim())
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                if (!lastWasSpace)
+                {
+                    builder.Append(' ');
+                }
+
+                lastWasSpace = true;
+                continue;
+            }
+
+            builder.Append(char.ToLowerInvariant(ch));
+            lastWasSpace = false;
+        }
+
+        return builder.ToString();
     }
 
     private sealed record ImportPreview(

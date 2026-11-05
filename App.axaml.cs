@@ -35,12 +35,13 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var store = new BankStore();
+            var progressStore = new BankProgressStore();
+            var store = new BankStore(AppPaths.BanksDirectory, progressStore);
             var settingsStore = new AppSettingsStore();
             var recordStore = new ExamRecordStore();
             var window = new MainWindow();
 
-            window.DataContext = new MainViewModel(store, settingsStore, new DialogService(window), recordStore);
+            window.DataContext = new MainViewModel(store, settingsStore, new DialogService(window), recordStore, progressStore);
             desktop.MainWindow = window;
         }
 

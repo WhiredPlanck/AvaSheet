@@ -11,8 +11,6 @@ namespace ExamSystem.Services;
 /// <summary>settings.json 的读写。读写失败不影响主流程，一律吞掉并回落到默认值。</summary>
 public sealed class AppSettingsStore
 {
-    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-
     private readonly string _path;
 
     public AppSettingsStore(string path)
@@ -76,10 +74,8 @@ public sealed class AppSettingsStore
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            var tmp = _path + ".tmp";
             var json = JsonSerializer.Serialize(Current, JsonContext.AppSettingsInfo);
-            await File.WriteAllTextAsync(tmp, json, Utf8NoBom, ct).ConfigureAwait(false);
-            File.Move(tmp, _path, overwrite: true);
+            await AtomicFile.WriteAllTextAsync(_path, json, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

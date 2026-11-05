@@ -5,13 +5,19 @@ using System.Text.Json.Serialization;
 namespace ExamSystem.Models;
 
 /// <summary>一个题库，对应磁盘上的一个 JSON 文件。</summary>
+/// <remarks>
+/// 这里只放题目与元数据。错题本和练习进度是用户数据，存在
+/// <see cref="BankProgress"/> 里（progress/{bankId}.json），
+/// 这样题库文件可以随便拷贝、导出、覆盖。
+/// </remarks>
 public sealed class QuestionBank
 {
     /// <summary>
-    /// 当前程序能读写的格式版本。v2 起多出 <see cref="WrongQuestionIds"/>，
-    /// v3 起多出 <see cref="PracticeProgress"/>，旧文件读进来都是空集合。
+    /// 当前程序能读写的格式版本。v2 起多出错题本，v3 起多出练习进度，
+    /// v4 起这两样移出题库文件、改存 progress/{bankId}.json；
+    /// 旧文件里多出来的字段读进来会被忽略，首次打开时迁移过去。
     /// </summary>
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     /// <summary>
     /// 题库 Id 就是文件名，不写进 JSON，避免内容和文件名不一致。
@@ -30,25 +36,4 @@ public sealed class QuestionBank
     public DateTimeOffset UpdatedAt { get; set; }
 
     public List<Question> Questions { get; set; } = [];
-
-    /// <summary>
-    /// 错题本：做错过的题目 Id。答对后从集合里移除，
-    /// 所以这里始终表示"当前还没掌握的题"。
-    /// </summary>
-    public List<string> WrongQuestionIds { get; set; } = [];
-
-    /// <summary>
-    /// 平时练习的进度：每个题型各自记下已经做完的题目 Id。
-    /// 做过的题不会再出现在下一轮里，清除进度后重新开始。
-    /// </summary>
-    public List<PracticeProgressEntry> PracticeProgress { get; set; } = [];
-}
-
-/// <summary>一个题型的练习进度。</summary>
-public sealed class PracticeProgressEntry
-{
-    public QuestionType Type { get; set; }
-
-    /// <summary>这个题型里已经做完的题目 Id。</summary>
-    public List<string> DoneIds { get; set; } = [];
 }

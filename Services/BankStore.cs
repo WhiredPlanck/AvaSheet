@@ -24,6 +24,7 @@ public sealed class BankStore : IBankStore
     private const string TempSuffix = ".tmp";
 
     private readonly string _directory;
+    private readonly IBankProgressStore? _progress;
 
     /// <summary>文件名 → (文件签名, 摘要)。文件一改签名就变，缓存自然失效。</summary>
     private readonly Dictionary<string, (string Signature, BankSummary Summary)> _summaryCache =
@@ -34,9 +35,10 @@ public sealed class BankStore : IBankStore
     /// <summary>写操作串行化，避免同一库并发写互相踩。</summary>
     private readonly SemaphoreSlim _writeGate = new(1, 1);
 
-    public BankStore(string directory)
+    public BankStore(string directory, IBankProgressStore? progress = null)
     {
         _directory = directory;
+        _progress = progress;
     }
 
     /// <summary>默认使用用户数据目录。</summary>
@@ -135,8 +137,6 @@ public sealed class BankStore : IBankStore
 
         bank.Id = id;
         bank.Questions ??= [];
-        bank.WrongQuestionIds ??= [];
-        bank.PracticeProgress ??= [];
         return bank;
     }
 
@@ -204,6 +204,12 @@ public sealed class BankStore : IBankStore
 
             TryDelete(path + TempSuffix);
             _summaryCache.Remove(Path.GetFileName(path));
+
+            // 题库删了，它的错题本和练习进度也一起清掉。
+            if (_progress is not null)
+            {
+                await _progress.DeleteAsync(id, ct).ConfigureAwait(false);
+            }
         }
         finally
         {
@@ -216,8 +222,6 @@ public sealed class BankStore : IBankStore
         ArgumentNullException.ThrowIfNull(bank);
         bank.Name = ValidateName(bank.Name);
         bank.Questions ??= [];
-        bank.WrongQuestionIds ??= [];
-        bank.PracticeProgress ??= [];
         bank.SchemaVersion = QuestionBank.CurrentSchemaVersion;
         bank.UpdatedAt = DateTimeOffset.Now;
         if (bank.CreatedAt == default)
@@ -254,8 +258,7 @@ public sealed class BankStore : IBankStore
         string.IsNullOrWhiteSpace(bank.Name) ? id : bank.Name,
         bank.Description,
         bank.Questions?.Count ?? 0,
-        bank.UpdatedAt,
-        bank.WrongQuestionIds?.Count(w => bank.Questions?.Any(q => q.Id == w) == true) ?? 0);
+        bank.UpdatedAt);
 
     private static string Signature(FileInfo file) => $"{file.Length}:{file.LastWriteTimeUtc.Ticks}";
 
@@ -286,22 +289,7 @@ public sealed class BankStore : IBankStore
     /// <summary>先写 .tmp 再原子替换，避免半截文件。</summary>
     private static async Task WriteAtomicAsync(string path, string content, CancellationToken ct)
     {
-        var tmp = path + TempSuffix;
-        var bytes = Encoding.UTF8.GetBytes(content);
-
-        await using (var stream = new FileStream(
-                         tmp,
-                         FileMode.Create,
-                         FileAccess.Write,
-                         FileShare.None,
-                         bufferSize: 64 * 1024,
-                         FileOptions.Asynchronous))
-        {
-            await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
-            await stream.FlushAsync(ct).ConfigureAwait(false);
-        }
-
-        File.Move(tmp, path, overwrite: true);
+        await AtomicFile.WriteAllTextAsync(path, content, ct).ConfigureAwait(false);
     }
 
     private static void SetProperty(JsonObject node, string name, string value)

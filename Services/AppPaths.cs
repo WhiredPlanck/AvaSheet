@@ -17,6 +17,9 @@ public static class AppPaths
     /// <summary>题库目录，一库一文件。</summary>
     public static string BanksDirectory { get; } = Path.Combine(RootDirectory, "banks");
 
+    /// <summary>用户数据目录：每库一个进度文件（错题本、练习进度）。</summary>
+    public static string ProgressDirectory { get; } = Path.Combine(RootDirectory, "progress");
+
     /// <summary>偏好设置文件。</summary>
     public static string SettingsFile { get; } = Path.Combine(RootDirectory, "settings.json");
 

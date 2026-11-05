@@ -46,6 +46,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     private readonly IBankStore? _store;
     private readonly IExamRecordStore? _records;
+    private readonly IBankProgressStore? _progressStore;
     private readonly string? _bankId;
     private readonly string? _initialBankName;
     private readonly IDialogService? _dialogs;
@@ -73,7 +74,8 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         string? bankName,
         IDialogService? dialogs,
         Action? goBack = null,
-        IExamRecordStore? records = null)
+        IExamRecordStore? records = null,
+        IBankProgressStore? progress = null)
         : base(goBack)
     {
         _store = store;
@@ -82,6 +84,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         _dialogs = dialogs;
         _goBack = goBack;
         _records = records;
+        _progressStore = progress;
 
         LeaveCommand = new AsyncRelayCommand(LeaveAsync);
     }
@@ -701,12 +704,12 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         NotifyAll();
     }
 
-    /// <summary>把这次答错的题收进题库的错题本；错题本本来就有，就只提示一下。</summary>
+    /// <summary>把这次答错的题收进错题本；错题本本来就有，就只提示一下。</summary>
     private async Task CollectWrongQuestionsAsync()
     {
         WrongBookNote = null;
 
-        if (_store is null || _bank is null)
+        if (_progressStore is null || _bankId is null)
         {
             return;
         }
@@ -722,21 +725,22 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
             return;
         }
 
-        var existing = _bank.WrongQuestionIds ?? [];
-        var added = wrongIds
-            .Where(id => !existing.Contains(id, StringComparer.Ordinal))
-            .ToList();
-
-        if (added.Count == 0)
-        {
-            WrongBookNote = $"本次答错的 {wrongIds.Count} 道题原本就在错题本里。";
-            return;
-        }
-
         try
         {
-            _bank.WrongQuestionIds = [.. existing, .. added];
-            await _store.SaveAsync(_bank);
+            var progress = await _progressStore.LoadAsync(_bankId);
+            var existing = progress.WrongQuestionIds;
+            var added = wrongIds
+                .Where(id => !existing.Contains(id, StringComparer.Ordinal))
+                .ToList();
+
+            if (added.Count == 0)
+            {
+                WrongBookNote = $"本次答错的 {wrongIds.Count} 道题原本就在错题本里。";
+                return;
+            }
+
+            progress.WrongQuestionIds = [.. existing, .. added];
+            await _progressStore.SaveAsync(_bankId, progress);
 
             WrongBookNote = wrongIds.Count == added.Count
                 ? $"本次答错的 {wrongIds.Count} 道题已加入错题本。"

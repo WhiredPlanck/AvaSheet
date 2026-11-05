@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,8 +20,6 @@ public sealed class ExamRecordStore : IExamRecordStore
 {
     /// <summary>最多保留多少条记录。</summary>
     public const int MaxRecords = 200;
-
-    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
     private readonly string _file;
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -148,17 +145,6 @@ public sealed class ExamRecordStore : IExamRecordStore
         }
 
         var json = JsonSerializer.Serialize(records, JsonContext.ExamRecordListInfo);
-        var temp = _file + ".tmp";
-
-        await using (var stream = new FileStream(
-                         temp, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
-        {
-            await using var writer = new StreamWriter(stream, Utf8NoBom);
-            await writer.WriteAsync(json);
-            await writer.FlushAsync();
-            await stream.FlushAsync();
-        }
-
-        File.Move(temp, _file, overwrite: true);
+        await AtomicFile.WriteAllTextAsync(_file, json).ConfigureAwait(false);
     }
 }

@@ -33,8 +33,12 @@ public partial class MainViewModel : ViewModelBase
     private readonly AppSettingsStore _settingsStore;
     private readonly IDialogService? _dialogs;
     private readonly IExamRecordStore _recordStore;
+    private readonly IBankProgressStore _progressStore;
 
     private AppSettings _settings = new();
+
+    /// <summary>当前题库错题本里的题数，状态栏与首页卡片都要用。</summary>
+    private int _selectedWrongCount;
     private bool _initialized;
     private bool _suspendSettingsSave;
 
@@ -48,14 +52,16 @@ public partial class MainViewModel : ViewModelBase
         IBankStore store,
         AppSettingsStore settingsStore,
         IDialogService? dialogs,
-        IExamRecordStore? recordStore = null)
+        IExamRecordStore? recordStore = null,
+        IBankProgressStore? progressStore = null)
     {
         _store = store;
         _settingsStore = settingsStore;
         _dialogs = dialogs;
         _recordStore = recordStore ?? new ExamRecordStore();
+        _progressStore = progressStore ?? new BankProgressStore();
 
-        Home = new HomeViewModel(Navigate, () => SelectedBank);
+        Home = new HomeViewModel(Navigate);
         CurrentPage = Home;
     }
 
@@ -88,7 +94,8 @@ public partial class MainViewModel : ViewModelBase
     public string BankStatusText => SelectedBank switch
     {
         null => "未选择题库",
-        { WrongCount: > 0 } bank => $"{bank.Name} · {bank.QuestionCount} 道题 · 错题 {bank.WrongCount}",
+        _ when _selectedWrongCount > 0
+            => $"{SelectedBank.Name} · {SelectedBank.QuestionCount} 道题 · 错题 {_selectedWrongCount}",
         var bank => $"{bank.Name} · {bank.QuestionCount} 道题",
     };
 
@@ -276,13 +283,41 @@ public partial class MainViewModel : ViewModelBase
                 ? Banks.FirstOrDefault()
                 : Banks.FirstOrDefault(x => x.Id == target) ?? Banks.FirstOrDefault();
             _suspendSettingsSave = false;
-            Home.RefreshBankInfo();
+            await RefreshSelectedProgressAsync();
         }
         catch (Exception ex)
         {
             _suspendSettingsSave = false;
             StatusText = "读取题库失败：" + ex.Message;
         }
+    }
+
+    /// <summary>读当前题库的错题本，更新状态栏与首页的错题数。</summary>
+    private async Task RefreshSelectedProgressAsync()
+    {
+        var bankId = SelectedBank?.Id;
+        var count = 0;
+
+        if (bankId is not null)
+        {
+            try
+            {
+                var progress = await _progressStore.LoadAsync(bankId);
+                // 题目被删掉后可能留下孤儿 Id，只算题库里还在的。
+                var bank = await _store.LoadAsync(bankId);
+                var alive = bank?.Questions.Select(q => q.Id).ToHashSet(StringComparer.Ordinal) ?? [];
+                count = progress.WrongQuestionIds.Count(alive.Contains);
+            }
+            catch (Exception)
+            {
+                // 读不到进度就当作没有错题：状态栏不值得为此报错。
+                count = 0;
+            }
+        }
+
+        _selectedWrongCount = count;
+        OnPropertyChanged(nameof(BankStatusText));
+        Home.RefreshBankInfo(count);
     }
 
     /// <summary>把考试记录的条数与最近一次成绩同步到首页卡片。</summary>
@@ -312,19 +347,22 @@ public partial class MainViewModel : ViewModelBase
                 SelectedBank?.Name,
                 _dialogs,
                 GoHome,
-                _recordStore),
+                _recordStore,
+                _progressStore),
             PageKind.Practice => new PracticeViewModel(
                 _store,
                 SelectedBank?.Id,
                 SelectedBank?.Name,
-                GoHome),
+                GoHome,
+                progress: _progressStore),
             PageKind.WrongBook => new PracticeViewModel(
                 _store,
                 SelectedBank?.Id,
                 SelectedBank?.Name,
                 GoHome,
                 startWrongOnly: true,
-                openPractice: () => Navigate(PageKind.Practice)),
+                openPractice: () => Navigate(PageKind.Practice),
+                progress: _progressStore),
             PageKind.Questions => new QuestionManageViewModel(
                 _store,
                 _dialogs,
@@ -406,7 +444,7 @@ public partial class MainViewModel : ViewModelBase
     partial void OnSelectedBankChanged(BankSummary? value)
     {
         OnPropertyChanged(nameof(BankStatusText));
-        Home.RefreshBankInfo();
+        _ = RefreshSelectedProgressAsync();
 
         if (!_initialized || _suspendSettingsSave)
         {

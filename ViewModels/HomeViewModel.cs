@@ -1,6 +1,5 @@
 using System;
 using CommunityToolkit.Mvvm.Input;
-using ExamSystem.Services;
 
 namespace ExamSystem.ViewModels;
 
@@ -8,22 +7,21 @@ namespace ExamSystem.ViewModels;
 public partial class HomeViewModel : ViewModelBase
 {
     private readonly Action<PageKind>? _navigate;
-    private readonly Func<BankSummary?>? _getBank;
 
+    private int _wrongBookCount;
     private int _recordCount;
     private double? _lastScore;
     private double? _lastTotal;
 
     /// <summary>供 XAML 设计器预览使用。</summary>
     public HomeViewModel()
-        : this(null, null)
+        : this(null)
     {
     }
 
-    public HomeViewModel(Action<PageKind>? navigate, Func<BankSummary?>? getBank = null)
+    public HomeViewModel(Action<PageKind>? navigate)
     {
         _navigate = navigate;
-        _getBank = getBank;
     }
 
     public string Headline => "开始今天的练习";
@@ -31,7 +29,7 @@ public partial class HomeViewModel : ViewModelBase
     public string Subheadline => "题目全部来自本地题库，不需要联网。";
 
     /// <summary>当前题库里还没掌握的题目数，卡片上直接显示。</summary>
-    public int WrongBookCount => _getBank?.Invoke()?.WrongCount ?? 0;
+    public int WrongBookCount => _wrongBookCount;
 
     public string WrongBookHint => WrongBookCount > 0
         ? $"还有 {WrongBookCount} 道错题，专门刷这些。"
@@ -59,8 +57,9 @@ public partial class HomeViewModel : ViewModelBase
     private void OpenRecords() => _navigate?.Invoke(PageKind.Records);
 
     /// <summary>题库或错题数变化后刷新卡片上的动态文案。</summary>
-    public void RefreshBankInfo()
+    public void RefreshBankInfo(int wrongBookCount)
     {
+        _wrongBookCount = wrongBookCount;
         OnPropertyChanged(nameof(WrongBookCount));
         OnPropertyChanged(nameof(WrongBookHint));
     }

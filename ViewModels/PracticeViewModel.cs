@@ -33,17 +33,18 @@ public enum PracticePhase
 /// <summary>
 /// 平时练习：按题型一轮一轮地刷题，逐题作答、即时判定、顺手记错题。
 ///
-/// 进入时先选题型和顺序（按题库顺序 / 随机），做过的题会记在题库文件的
-/// practiceProgress 里，下一次接着做没做过的；清除进度或用「再练一轮」
-/// 就从头开始。
+/// 进入时先选题型和顺序（按题库顺序 / 随机），做过的题会记在
+/// progress/{bankId}.json 的 practiceProgress 里，下一次接着做没做过的；
+/// 清除进度或用「再练一轮」就从头开始。
 ///
 /// 单选题和判断题点一下选项就直接判；多选题选完再点「提交答案」。
-/// 错题本存在题库文件的 wrongQuestionIds 里，答对后自动移出，
+/// 错题本也在这个进度文件里，答对后自动移出，
 /// 所以它表示「当前还没掌握的题」，而不是历史错误次数。
 /// </summary>
 public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSession
 {
     private readonly IBankStore? _store;
+    private readonly IBankProgressStore? _progressStore;
     private readonly string? _bankId;
     private readonly string? _initialBankName;
     private readonly Action? _goBack;
@@ -65,6 +66,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     private readonly Dictionary<string, bool> _results = new(StringComparer.Ordinal);
 
     private QuestionBank? _bank;
+    private BankProgress _progress = new();
     private int _index;
     private DateTimeOffset _startedAt;
     private bool _initialized;
@@ -89,10 +91,12 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         string? bankName,
         Action? goBack = null,
         bool startWrongOnly = false,
-        Action? openPractice = null)
+        Action? openPractice = null,
+        IBankProgressStore? progress = null)
         : base(goBack)
     {
         _store = store;
+        _progressStore = progress;
         _bankId = bankId;
         _initialBankName = bankName;
         _goBack = goBack;
@@ -419,10 +423,22 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
             return;
         }
 
-        _wrongIds.UnionWith(_bank.WrongQuestionIds);
+        if (_progressStore is not null && _bankId is not null)
+        {
+            try
+            {
+                _progress = await _progressStore.LoadAsync(_bankId).ConfigureAwait(true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _progress = new BankProgress();
+            }
+        }
+
+        _wrongIds.UnionWith(_progress.WrongQuestionIds);
         _wrongIds.RemoveWhere(id => _bank.Questions.All(q => q.Id != id));
 
-        LoadProgress(_bank);
+        LoadProgress(_progress);
 
         if (_wrongBookEntry)
         {
@@ -435,10 +451,10 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         NotifyAll();
     }
 
-    /// <summary>把题库里记下的练习进度读进来，顺手丢掉已经不存在或换了题型的 Id。</summary>
-    private void LoadProgress(QuestionBank bank)
+    /// <summary>把记下的练习进度读进来，顺手丢掉已经不存在或换了题型的 Id。</summary>
+    private void LoadProgress(BankProgress progress)
     {
-        foreach (var entry in bank.PracticeProgress)
+        foreach (var entry in progress.PracticeProgress)
         {
             if (_done.TryGetValue(entry.Type, out var set))
             {
@@ -446,7 +462,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
             }
         }
 
-        var alive = bank.Questions
+        var alive = (_bank?.Questions ?? [])
             .Select(q => (q.Id, q.Type))
             .ToHashSet();
 
@@ -771,7 +787,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
 
     private async Task PersistAsync()
     {
-        if (_store is null || _bank is null || !_dirty)
+        if (_bank is null || _bankId is null || !_dirty)
         {
             return;
         }
@@ -779,8 +795,8 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         try
         {
             var alive = _bank.Questions.Select(q => q.Id).ToHashSet(StringComparer.Ordinal);
-            _bank.WrongQuestionIds = [.. _wrongIds.Where(alive.Contains)];
-            _bank.PracticeProgress = _done
+            _progress.WrongQuestionIds = [.. _wrongIds.Where(alive.Contains)];
+            _progress.PracticeProgress = _done
                 .Where(pair => pair.Value.Count > 0)
                 .OrderBy(pair => pair.Key)
                 .Select(pair => new PracticeProgressEntry
@@ -789,7 +805,12 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
                     DoneIds = [.. pair.Value.Where(alive.Contains)],
                 })
                 .ToList();
-            await _store.SaveAsync(_bank);
+
+            if (_progressStore is not null)
+            {
+                await _progressStore.SaveAsync(_bankId, _progress);
+            }
+
             _dirty = false;
             ErrorMessage = null;
         }

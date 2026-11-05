@@ -23,6 +23,7 @@ namespace ExamSystem.Services;
 [JsonSerializable(typeof(List<Question>))]
 [JsonSerializable(typeof(ExamRecord))]
 [JsonSerializable(typeof(List<ExamRecord>))]
+[JsonSerializable(typeof(BankProgress))]
 internal sealed partial class JsonContext : JsonSerializerContext
 {
     /// <summary>
@@ -56,10 +57,13 @@ internal sealed partial class JsonContext : JsonSerializerContext
 
     public static JsonTypeInfo<List<ExamRecord>> ExamRecordListInfo => _examRecordList ??= Get<List<ExamRecord>>();
 
+    public static JsonTypeInfo<BankProgress> BankProgressInfo => _bankProgress ??= Get<BankProgress>();
+
     private static JsonTypeInfo<QuestionBank>? _questionBank;
     private static JsonTypeInfo<AppSettings>? _appSettings;
     private static JsonTypeInfo<List<Question>>? _questionList;
     private static JsonTypeInfo<List<ExamRecord>>? _examRecordList;
+    private static JsonTypeInfo<BankProgress>? _bankProgress;
 
     private static JsonTypeInfo<T> Get<T>() => (JsonTypeInfo<T>)Io.GetTypeInfo(typeof(T))!;
 }

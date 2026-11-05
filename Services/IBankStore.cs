@@ -12,8 +12,7 @@ public sealed record BankSummary(
     string Name,
     string? Description,
     int QuestionCount,
-    DateTimeOffset UpdatedAt,
-    int WrongCount = 0);
+    DateTimeOffset UpdatedAt);
 
 /// <summary>
 /// 题库存储。ViewModel 只依赖这个接口，不直接碰 File / JsonSerializer，
