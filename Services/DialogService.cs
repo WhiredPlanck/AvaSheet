@@ -20,8 +20,14 @@ public sealed class DialogService(Window owner) : IDialogService
 
     private static readonly FilePickerFileType QuestionFileType = new("题目文件")
     {
-        Patterns = ["*.json", "*.xlsx"],
-        MimeTypes = ["application/json", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+        Patterns = ["*.json", "*.xlsx", "*.xls", "*.xlsb"],
+        MimeTypes =
+        [
+            "application/json",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+            "application/vnd.ms-excel.sheet.binary.macroEnabled.12",
+        ],
     };
 
     public async Task<string?> PromptBankNameAsync(

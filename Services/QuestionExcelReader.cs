@@ -5,9 +5,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Xml;
-using System.Xml.Linq;
 using ExamSystem.Models;
+using Sylvan.Data.Excel;
 
 namespace ExamSystem.Services;
 
@@ -20,161 +19,101 @@ public sealed record ExcelQuestionImportResult(
     IReadOnlyList<ExcelRowError> Errors);
 
 /// <summary>
-/// 轻量 .xlsx 读取器：只用 <see cref="ZipArchive"/> + <see cref="XmlReader"/>，
-/// 不依赖任何第三方库，也不依赖文件里的工作表顺序与列顺序。
+/// 读 Excel 里的题目：文件解析交给 <see cref="ExcelDataReader"/>（.xlsx / .xls / .xlsb），
+/// 这里只负责找表头、按列名取单元格、校验并组装题目。
 /// </summary>
 public static class QuestionExcelReader
 {
     private const int MaxChoices = 8;
     private const int HeaderRowScanLimit = 10;
 
-    private const string RelNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-
     private static readonly char[] AnswerSeparators = [',', '，', '、', ';', '；', ' ', '\t', '/', '|'];
     private static readonly char[] TagSeparators = [',', '，', '、', ';', '；'];
 
+    /// <summary>OLE2 / BIFF8 文件头，老式 .xls 用它。</summary>
+    private static readonly byte[] OleMagic = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+
+    /// <summary>
+    /// 判断该按哪种表格格式读。返回 null 表示不是表格（交给 JSON 解析）。
+    /// 扩展名不认识时看文件头：OLE2 是 .xls，zip 里带 xl/workbook.bin 是 .xlsb，其余 zip 是 .xlsx。
+    /// </summary>
+    public static ExcelWorkbookType? DetectWorkbookType(Stream stream, string? fileName)
+    {
+        if (fileName is { Length: > 0 })
+        {
+            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (fileName.EndsWith(".xlsb", StringComparison.OrdinalIgnoreCase))
+            {
+                return ExcelWorkbookType.ExcelBinary;
+            }
+
+            if (fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+                || fileName.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
+                || fileName.EndsWith(".xltx", StringComparison.OrdinalIgnoreCase)
+                || fileName.EndsWith(".xltm", StringComparison.OrdinalIgnoreCase))
+            {
+                return ExcelWorkbookType.ExcelXml;
+            }
+
+            if (fileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
+            {
+                return ExcelWorkbookType.Excel;
+            }
+        }
+
+        if (!stream.CanSeek)
+        {
+            // 读不了文件头就没法判断；按最常见的 .xlsx 试着读，读不出来会给出「不是有效的 Excel 文件」。
+            return ExcelWorkbookType.ExcelXml;
+        }
+
+        var start = stream.Position;
+        Span<byte> head = stackalloc byte[8];
+        var read = stream.Read(head);
+        stream.Position = start;
+
+        if (read >= OleMagic.Length && head.SequenceEqual(OleMagic))
+        {
+            return ExcelWorkbookType.Excel;
+        }
+
+        if (read >= 4 && head[0] == 'P' && head[1] == 'K' && head[2] == 3 && head[3] == 4)
+        {
+            return HasBinaryWorkbook(stream, start) ? ExcelWorkbookType.ExcelBinary : ExcelWorkbookType.ExcelXml;
+        }
+
+        return null;
+    }
+
     /// <summary>读取第一个工作表并按表头映射成题目。</summary>
     public static ExcelQuestionImportResult Read(Stream stream)
+        => Read(stream, DetectWorkbookType(stream, null) ?? ExcelWorkbookType.ExcelXml);
+
+    /// <summary>按指定格式读取第一个工作表并按表头映射成题目。</summary>
+    public static ExcelQuestionImportResult Read(Stream stream, ExcelWorkbookType type)
+        => BuildQuestions(ReadRows(stream, type));
+
+    private static bool HasBinaryWorkbook(Stream stream, long start)
     {
-        ZipArchive archive;
         try
         {
-            archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
+            return archive.Entries.Any(
+                e => string.Equals(e.FullName, "xl/workbook.bin", StringComparison.OrdinalIgnoreCase));
         }
         catch (InvalidDataException)
         {
-            throw new InvalidDataException(
-                "这不是有效的 Excel 文件。老式 .xls 请在 Excel 或 WPS 里另存为 .xlsx 再导入。");
+            return false;
         }
-
-        using (archive)
+        finally
         {
-            var sharedStrings = ReadSharedStrings(archive);
-            var sheetPath = ResolveFirstSheetPath(archive);
-            var sheetEntry = FindEntry(archive, sheetPath)
-                ?? throw new InvalidDataException("这个 Excel 文件里没有工作表。");
-
-            var rows = ReadRows(sheetEntry, sharedStrings);
-            return BuildQuestions(rows);
+            stream.Position = start;
         }
     }
-
-    // ---------- 包结构 ----------
-
-    private static ZipArchiveEntry? FindEntry(ZipArchive archive, string path)
-    {
-        var entry = archive.GetEntry(path);
-        if (entry is not null)
-        {
-            return entry;
-        }
-
-        return archive.Entries.FirstOrDefault(
-            e => string.Equals(e.FullName, path, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string ResolveFirstSheetPath(ZipArchive archive)
-    {
-        const string fallback = "xl/worksheets/sheet1.xml";
-
-        var workbookEntry = FindEntry(archive, "xl/workbook.xml");
-        if (workbookEntry is null)
-        {
-            return fallback;
-        }
-
-        XDocument workbook;
-        try
-        {
-            workbook = LoadXml(workbookEntry);
-        }
-        catch (XmlException)
-        {
-            throw new InvalidDataException("这不是有效的 Excel 文件。");
-        }
-
-        var sheet = workbook.Descendants().FirstOrDefault(e => e.Name.LocalName == "sheet");
-        var relationId = sheet?.Attribute(XName.Get("id", RelNamespace))?.Value;
-        if (string.IsNullOrEmpty(relationId))
-        {
-            return fallback;
-        }
-
-        var relsEntry = FindEntry(archive, "xl/_rels/workbook.xml.rels");
-        if (relsEntry is null)
-        {
-            return fallback;
-        }
-
-        XDocument rels;
-        try
-        {
-            rels = LoadXml(relsEntry);
-        }
-        catch (XmlException)
-        {
-            return fallback;
-        }
-
-        var target = rels.Descendants()
-            .FirstOrDefault(e => e.Name.LocalName == "Relationship"
-                                 && string.Equals(e.Attribute("Id")?.Value, relationId, StringComparison.Ordinal))
-            ?.Attribute("Target")?.Value;
-
-        if (string.IsNullOrWhiteSpace(target))
-        {
-            return fallback;
-        }
-
-        target = target.Replace('\\', '/');
-        if (target.StartsWith('/'))
-        {
-            return target.TrimStart('/');
-        }
-
-        return target.StartsWith("xl/", StringComparison.OrdinalIgnoreCase) ? target : "xl/" + target;
-    }
-
-    private static XDocument LoadXml(ZipArchiveEntry entry)
-    {
-        using var stream = entry.Open();
-        using var reader = XmlReader.Create(stream, new XmlReaderSettings
-        {
-            IgnoreWhitespace = true,
-            DtdProcessing = DtdProcessing.Prohibit,
-        });
-        return XDocument.Load(reader);
-    }
-
-    private static List<string> ReadSharedStrings(ZipArchive archive)
-    {
-        var entry = FindEntry(archive, "xl/sharedStrings.xml");
-        if (entry is null)
-        {
-            return [];
-        }
-
-        XDocument document;
-        try
-        {
-            document = LoadXml(entry);
-        }
-        catch (XmlException)
-        {
-            return [];
-        }
-
-        return
-        [
-            .. document.Descendants()
-                .Where(e => e.Name.LocalName == "si")
-                .Select(ItemText)
-        ];
-    }
-
-    /// <summary>共享字符串或内联字符串的文本；富文本由多个 &lt;r&gt;&lt;t&gt; 拼起来。</summary>
-    private static string ItemText(XElement item)
-        => string.Concat(item.Descendants().Where(e => e.Name.LocalName == "t").Select(t => t.Value));
 
     // ---------- 单元格 ----------
 
@@ -186,105 +125,90 @@ public static class QuestionExcelReader
         public Dictionary<int, string> Cells { get; } = cells;
 
         public string Get(int? column) => column is { } c && Cells.TryGetValue(c, out var text) ? text : "";
+
+        public bool IsBlank => Cells.Values.All(string.IsNullOrWhiteSpace);
     }
 
-    private static List<SheetRow> ReadRows(ZipArchiveEntry entry, List<string> sharedStrings)
+    private static List<SheetRow> ReadRows(Stream stream, ExcelWorkbookType type)
     {
-        var rows = new List<SheetRow>();
-
-        using var stream = entry.Open();
-        using var reader = XmlReader.Create(stream, new XmlReaderSettings
+        if (type == ExcelWorkbookType.Excel)
         {
-            IgnoreWhitespace = true,
-            DtdProcessing = DtdProcessing.Prohibit,
-        });
-
-        while (!reader.EOF)
-        {
-            if (reader is { NodeType: XmlNodeType.Element, LocalName: "row", IsEmptyElement: false })
-            {
-                // ReadFrom 会把读取器移到该元素之后，所以这里不能再次 Read()，
-                // 否则会跳过紧随其后的下一个 <row>。
-                var rowElement = (XElement)XNode.ReadFrom(reader);
-                rows.Add(ParseRow(rowElement, sharedStrings, rows.Count + 1));
-                continue;
-            }
-
-            reader.Read();
+            EnsureLegacyEncodings();
         }
 
-        return rows;
-    }
-
-    private static SheetRow ParseRow(XElement rowElement, List<string> sharedStrings, int fallbackNumber)
-    {
-        var number = int.TryParse(rowElement.Attribute("r")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : fallbackNumber;
-
-        var cells = new Dictionary<int, string>();
-        var nextColumn = 0;
-
-        foreach (var cell in rowElement.Elements().Where(e => e.Name.LocalName == "c"))
+        try
         {
-            var reference = cell.Attribute("r")?.Value;
-            var column = reference is null ? nextColumn : ColumnIndex(reference);
-            nextColumn = column + 1;
+            using var reader = ExcelDataReader.Create(stream, type, new ExcelDataReaderOptions
+            {
+                // 错误单元格（#N/A 之类）当空处理，不要因为一格错误让整次导入失败。
+                FormulaErrorHandling = FormulaErrorHandling.Null,
+                // 流由调用方关闭。
+                OwnsStream = false,
+                // 表头行也是数据：我们自己按列名找表头，不需要库替我们跳过第一行。
+                Schema = ExcelSchema.NoHeaders,
+            });
 
-            cells[column] = CellText(cell, sharedStrings);
+            var rows = new List<SheetRow>();
+
+            // reader 初始停在第一个工作表，NextResult() 才会换表。
+            while (reader.Read())
+            {
+                var cells = new Dictionary<int, string>();
+                for (var column = 0; column < reader.RowFieldCount; column++)
+                {
+                    var text = CellText(reader, column);
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        cells[column] = text;
+                    }
+                }
+
+                rows.Add(new SheetRow(reader.RowNumber, cells));
+            }
+
+            return rows;
         }
-
-        return new SheetRow(number, cells);
-    }
-
-    private static string CellText(XElement cell, List<string> sharedStrings)
-    {
-        var type = cell.Attribute("t")?.Value;
-
-        switch (type)
+        catch (InvalidDataException ex)
         {
-            case "s":
-            {
-                var indexText = cell.Elements().FirstOrDefault(e => e.Name.LocalName == "v")?.Value;
-                return int.TryParse(indexText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index)
-                       && index >= 0 && index < sharedStrings.Count
-                    ? sharedStrings[index]
-                    : "";
-            }
-            case "inlineStr":
-            {
-                var inline = cell.Elements().FirstOrDefault(e => e.Name.LocalName == "is");
-                return inline is null ? "" : ItemText(inline);
-            }
-            case "b":
-                return cell.Elements().FirstOrDefault(e => e.Name.LocalName == "v")?.Value == "1" ? "1" : "0";
-            default:
-                // t="str"（公式结果）与无类型（数字）都直接取 <v>，公式的缓存值也在这里。
-                return cell.Elements().FirstOrDefault(e => e.Name.LocalName == "v")?.Value ?? "";
+            throw new InvalidDataException("这不是有效的 Excel 文件。", ex);
+        }
+        catch (Exception ex) when (ex is FormatException or NotSupportedException or ArgumentException or IndexOutOfRangeException)
+        {
+            throw new InvalidDataException("这不是有效的 Excel 文件。", ex);
         }
     }
 
-    /// <summary>把 "AB12" 里的列字母转成 0 起的列号。</summary>
-    private static int ColumnIndex(string reference)
+    private static bool _legacyEncodingsRegistered;
+
+    /// <summary>
+    /// 老式 .xls（BIFF）按代码页存字符串（1252 / 936 等），.NET 默认不带这些编码。
+    /// 只导 .xls 时才注册，避免影响 .xlsx 路径。
+    /// </summary>
+    private static void EnsureLegacyEncodings()
     {
-        var column = 0;
-        foreach (var ch in reference)
+        if (_legacyEncodingsRegistered)
         {
-            if (ch is >= 'A' and <= 'Z')
-            {
-                column = column * 26 + (ch - 'A' + 1);
-            }
-            else if (ch is >= 'a' and <= 'z')
-            {
-                column = column * 26 + (ch - 'a' + 1);
-            }
-            else
-            {
-                break;
-            }
+            return;
         }
 
-        return Math.Max(0, column - 1);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        _legacyEncodingsRegistered = true;
+    }
+
+    private static string CellText(ExcelDataReader reader, int column)
+    {
+        var kind = reader.GetExcelDataType(column);
+        if (kind is ExcelDataType.Null or ExcelDataType.Error)
+        {
+            return "";
+        }
+
+        var text = reader.GetString(column);
+
+        // 布尔单元格读出来是 True / False，转成和旧解析一致的 1 / 0。
+        return kind == ExcelDataType.Boolean
+            ? string.Equals(text, "true", StringComparison.OrdinalIgnoreCase) ? "1" : "0"
+            : text;
     }
 
     // ---------- 表头 ----------
@@ -306,9 +230,17 @@ public static class QuestionExcelReader
     {
         var headerIndex = -1;
         ColumnMap? map = null;
+        var scanned = 0;
 
-        for (var i = 0; i < rows.Count && i < HeaderRowScanLimit; i++)
+        for (var i = 0; i < rows.Count && scanned < HeaderRowScanLimit; i++)
         {
+            if (rows[i].IsBlank)
+            {
+                continue;
+            }
+
+            scanned++;
+
             var candidate = MapHeader(rows[i]);
             if (candidate.Stem is not null && candidate.Answer is not null)
             {
@@ -330,7 +262,7 @@ public static class QuestionExcelReader
         for (var i = headerIndex + 1; i < rows.Count; i++)
         {
             var row = rows[i];
-            if (row.Cells.Values.All(string.IsNullOrWhiteSpace))
+            if (row.IsBlank)
             {
                 continue;
             }

@@ -468,50 +468,17 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
 
     private static async Task<ImportPreview> ReadImportFileAsync(Stream stream, string? fileName)
     {
-        var isExcel = await IsExcelFileAsync(stream, fileName);
+        var type = QuestionExcelReader.DetectWorkbookType(stream, fileName);
 
-        if (!isExcel)
+        if (type is null)
         {
             using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
             var json = await reader.ReadToEndAsync();
             return new ImportPreview(ParseQuestions(json), [], false);
         }
 
-        var excel = QuestionExcelReader.Read(stream);
+        var excel = QuestionExcelReader.Read(stream, type.Value);
         return new ImportPreview(excel.Questions, excel.Errors, true);
-    }
-
-    private static async Task<bool> IsExcelFileAsync(Stream stream, string? fileName)
-    {
-        if (fileName is not null)
-        {
-            if (fileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase)
-                && !fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidDataException(
-                    "不支持老式 .xls 文件。请在 Excel 或 WPS 里另存为 .xlsx 再导入。");
-            }
-
-            if (fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-
-        // 扩展名不认识时看文件头：xlsx 就是一个 zip 包。
-        var head = new byte[2];
-        var read = await stream.ReadAsync(head);
-        if (stream.CanSeek)
-        {
-            stream.Position = 0;
-        }
-
-        return read == 2 && head[0] == 'P' && head[1] == 'K';
     }
 
     [RelayCommand]
