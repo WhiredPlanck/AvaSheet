@@ -122,7 +122,7 @@ public sealed partial class QuestionEditorViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    public partial QuestionType SelectedType { get; set; } = QuestionType.SingleChoice;
+    public partial QuestionType SelectedType { get; set; }
 
     [ObservableProperty]
     public partial string Stem { get; set; } = "";
@@ -171,7 +171,7 @@ public sealed partial class QuestionEditorViewModel : ViewModelBase
     {
         question = null;
 
-        var stem = Stem?.Trim() ?? "";
+        var stem = Stem.Trim();
         if (stem.Length == 0)
         {
             error = "题干不能为空。";
@@ -227,10 +227,12 @@ public sealed partial class QuestionEditorViewModel : ViewModelBase
             filled[i].row.Key = KeyAt(i);
         }
 
-        built.Choices = filled
-            .Select(x => new QuestionChoice { Key = x.row.Key, Text = x.row.Text.Trim() })
-            .ToList();
-        built.Answers = correct.Select(x => x.row.Key).ToList();
+        built.Choices =
+        [
+            .. filled
+                .Select(x => new QuestionChoice { Key = x.row.Key, Text = x.row.Text.Trim() })
+        ];
+        built.Answers = [.. correct.Select(x => x.row.Key)];
 
         question = built;
         error = null;
@@ -352,10 +354,13 @@ public sealed partial class QuestionEditorViewModel : ViewModelBase
             return [];
         }
 
-        return text
-            .Split([',', '，', '、', ';', '；'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.CurrentCulture)
-            .ToList();
+        return
+        [
+            .. text
+                .Split([',', '，', '、', ';', '；'],
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.CurrentCulture)
+        ];
     }
 
     private static string NewId() => "q_" + Guid.NewGuid().ToString("N")[..12];

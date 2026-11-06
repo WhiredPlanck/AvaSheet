@@ -78,16 +78,14 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial string StatusText { get; set; } = "就绪";
 
-    private bool _isImmersive;
-
     /// <summary>
     /// 正在答题（模拟考试/平时练习/错题本）时为 true：
     /// 主窗口收起顶栏和状态栏，页面上也不再显示「当前是什么模式」。
     /// </summary>
     public bool IsImmersive
     {
-        get => _isImmersive;
-        private set => SetProperty(ref _isImmersive, value);
+        get;
+        private set => SetProperty(ref field, value);
     }
 
     /// <summary>状态栏右侧：当前题库、题量与错题数。</summary>
@@ -103,18 +101,16 @@ public partial class MainViewModel : ViewModelBase
 
     // ---------------------------------------------------------------- 渲染设置
 
-    private bool _hardwareAcceleration;
-
     /// <summary>
     /// 是否启用硬件加速。写进 settings.json，下次启动生效。
     /// 与本次启动实际使用的模式不同时，菜单文字会提示需要重启。
     /// </summary>
     public bool HardwareAcceleration
     {
-        get => _hardwareAcceleration;
+        get;
         set
         {
-            if (!SetProperty(ref _hardwareAcceleration, value))
+            if (!SetProperty(ref field, value))
             {
                 return;
             }

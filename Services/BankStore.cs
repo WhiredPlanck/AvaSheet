@@ -19,12 +19,9 @@ namespace ExamSystem.Services;
 /// 2. 所有 IO 都是异步的，且都接 CancellationToken；
 /// 3. ListAsync 靠「文件长度 + 修改时间」缓存摘要，题库多时不必每次全量解析。
 /// </summary>
-public sealed class BankStore : IBankStore
+public sealed class BankStore(string directory, IBankProgressStore? progress = null) : IBankStore
 {
     private const string TempSuffix = ".tmp";
-
-    private readonly string _directory;
-    private readonly IBankProgressStore? _progress;
 
     /// <summary>文件名 → (文件签名, 摘要)。文件一改签名就变，缓存自然失效。</summary>
     private readonly Dictionary<string, (string Signature, BankSummary Summary)> _summaryCache =
@@ -34,12 +31,6 @@ public sealed class BankStore : IBankStore
 
     /// <summary>写操作串行化，避免同一库并发写互相踩。</summary>
     private readonly SemaphoreSlim _writeGate = new(1, 1);
-
-    public BankStore(string directory, IBankProgressStore? progress = null)
-    {
-        _directory = directory;
-        _progress = progress;
-    }
 
     /// <summary>默认使用用户数据目录。</summary>
     public BankStore()
@@ -51,19 +42,19 @@ public sealed class BankStore : IBankStore
 
     public async Task<IReadOnlyList<BankSummary>> ListAsync(CancellationToken ct = default)
     {
-        Directory.CreateDirectory(_directory);
+        Directory.CreateDirectory(directory);
 
         var result = new List<BankSummary>();
         var alive = new HashSet<string>(StringComparer.Ordinal);
         _unreadableFiles.Clear();
 
-        foreach (var path in Directory.EnumerateFiles(_directory, "*" + TempSuffix))
+        foreach (var path in Directory.EnumerateFiles(directory, "*" + TempSuffix))
         {
             // 上次写到一半遗留的临时文件，直接清掉。
             TryDelete(path);
         }
 
-        foreach (var path in Directory.EnumerateFiles(_directory, "*.json"))
+        foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
         {
             ct.ThrowIfCancellationRequested();
 
@@ -111,10 +102,12 @@ public sealed class BankStore : IBankStore
             _summaryCache.Remove(stale);
         }
 
-        return result
-            .OrderByDescending(s => s.UpdatedAt)
-            .ThenBy(s => s.Name, StringComparer.CurrentCulture)
-            .ToList();
+        return
+        [
+            .. result
+                .OrderByDescending(s => s.UpdatedAt)
+                .ThenBy(s => s.Name, StringComparer.CurrentCulture)
+        ];
     }
 
     public async Task<QuestionBank?> LoadAsync(string id, CancellationToken ct = default)
@@ -136,7 +129,6 @@ public sealed class BankStore : IBankStore
         }
 
         bank.Id = id;
-        bank.Questions ??= [];
         return bank;
     }
 
@@ -206,9 +198,9 @@ public sealed class BankStore : IBankStore
             _summaryCache.Remove(Path.GetFileName(path));
 
             // 题库删了，它的错题本和练习进度也一起清掉。
-            if (_progress is not null)
+            if (progress is not null)
             {
-                await _progress.DeleteAsync(id, ct).ConfigureAwait(false);
+                await progress.DeleteAsync(id, ct).ConfigureAwait(false);
             }
         }
         finally
@@ -221,7 +213,6 @@ public sealed class BankStore : IBankStore
     {
         ArgumentNullException.ThrowIfNull(bank);
         bank.Name = ValidateName(bank.Name);
-        bank.Questions ??= [];
         bank.SchemaVersion = QuestionBank.CurrentSchemaVersion;
         bank.UpdatedAt = DateTimeOffset.Now;
         if (bank.CreatedAt == default)
@@ -234,7 +225,7 @@ public sealed class BankStore : IBankStore
         await _writeGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            Directory.CreateDirectory(_directory);
+            Directory.CreateDirectory(directory);
             var json = JsonSerializer.Serialize(bank, JsonContext.QuestionBankInfo);
             await WriteAtomicAsync(path, json, ct).ConfigureAwait(false);
             _summaryCache.Remove(Path.GetFileName(path));
@@ -257,7 +248,7 @@ public sealed class BankStore : IBankStore
         id,
         string.IsNullOrWhiteSpace(bank.Name) ? id : bank.Name,
         bank.Description,
-        bank.Questions?.Count ?? 0,
+        bank.Questions.Count,
         bank.UpdatedAt);
 
     private static string Signature(FileInfo file) => $"{file.Length}:{file.LastWriteTimeUtc.Ticks}";
@@ -265,15 +256,10 @@ public sealed class BankStore : IBankStore
     private static string NewId() => "bank_" + Guid.NewGuid().ToString("N")[..12];
 
     /// <summary>本实例目录下的题库文件路径。Id 先校验，杜绝路径穿越。</summary>
-    private string PathFor(string id)
-    {
-        if (!AppPaths.IsValidBankId(id))
-        {
-            throw new ArgumentException($"非法的题库 Id：{id}", nameof(id));
-        }
-
-        return Path.Combine(_directory, id + ".json");
-    }
+    private string PathFor(string id) =>
+        AppPaths.IsValidBankId(id)
+            ? Path.Combine(directory, id + ".json")
+            : throw new ArgumentException($"非法的题库 Id：{id}", nameof(id));
 
     private static string ValidateName(string? name)
     {

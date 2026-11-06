@@ -12,20 +12,10 @@ namespace ExamSystem.ViewModels;
 /// 题库管理小窗：只管题库本身（新建 / 导入 / 导出 / 重命名 / 删除），不管里面的题目。
 /// 所有 IO 都经 <see cref="IBankStore"/>，异常一律转成窗口内的提示，不吞掉。
 /// </summary>
-public sealed partial class BankManagerViewModel : ViewModelBase
+public sealed partial class BankManagerViewModel(IBankStore store, IDialogService dialogs, string? currentBankId = null)
+    : ViewModelBase
 {
-    private readonly IBankStore _store;
-    private readonly BankTransfer _transfer;
-    private readonly IDialogService _dialogs;
-    private readonly string? _initialBankId;
-
-    public BankManagerViewModel(IBankStore store, IDialogService dialogs, string? currentBankId = null)
-    {
-        _store = store;
-        _transfer = new BankTransfer(store);
-        _dialogs = dialogs;
-        _initialBankId = currentBankId;
-    }
+    private readonly BankTransfer _transfer = new(store);
 
     public ObservableCollection<BankRowViewModel> Banks { get; } = [];
 
@@ -69,7 +59,7 @@ public sealed partial class BankManagerViewModel : ViewModelBase
     [RelayCommand]
     private async Task CreateAsync()
     {
-        var name = await _dialogs.PromptBankNameAsync("新建题库", "", "创建");
+        var name = await dialogs.PromptBankNameAsync("新建题库", "", "创建");
         if (name is null)
         {
             return;
@@ -77,7 +67,7 @@ public sealed partial class BankManagerViewModel : ViewModelBase
 
         await RunAsync(async () =>
         {
-            var id = await _store.CreateAsync(name);
+            var id = await store.CreateAsync(name);
             LastChangedBankId = id;
             await ReloadAsync();
         });
@@ -86,7 +76,7 @@ public sealed partial class BankManagerViewModel : ViewModelBase
     [RelayCommand]
     private async Task ImportAsync()
     {
-        var file = await _dialogs.PickImportFileAsync();
+        var file = await dialogs.PickImportFileAsync();
         if (file is null)
         {
             return;
@@ -103,7 +93,7 @@ public sealed partial class BankManagerViewModel : ViewModelBase
 
     internal async Task RenameAsync(BankRowViewModel row)
     {
-        var name = await _dialogs.PromptBankNameAsync($"重命名「{row.Name}」", row.Name, "保存");
+        var name = await dialogs.PromptBankNameAsync($"重命名「{row.Name}」", row.Name, "保存");
         if (name is null || string.Equals(name, row.Name, StringComparison.Ordinal))
         {
             return;
@@ -111,7 +101,7 @@ public sealed partial class BankManagerViewModel : ViewModelBase
 
         await RunAsync(async () =>
         {
-            await _store.RenameAsync(row.Id, name);
+            await store.RenameAsync(row.Id, name);
             row.Name = name.Trim();
             row.UpdatedAt = DateTimeOffset.Now;
             row.IsConfirmingDelete = false;
@@ -121,7 +111,7 @@ public sealed partial class BankManagerViewModel : ViewModelBase
 
     internal async Task ExportAsync(BankRowViewModel row)
     {
-        var file = await _dialogs.PickExportFileAsync(SafeFileName(row.Name));
+        var file = await dialogs.PickExportFileAsync(SafeFileName(row.Name));
         if (file is null)
         {
             return;
@@ -144,7 +134,7 @@ public sealed partial class BankManagerViewModel : ViewModelBase
     {
         await RunAsync(async () =>
         {
-            await _store.DeleteAsync(row.Id);
+            await store.DeleteAsync(row.Id);
             if (string.Equals(LastChangedBankId, row.Id, StringComparison.Ordinal))
             {
                 LastChangedBankId = null;
@@ -160,20 +150,20 @@ public sealed partial class BankManagerViewModel : ViewModelBase
     {
         try
         {
-            var list = await _store.ListAsync();
+            var list = await store.ListAsync();
 
             Banks.Clear();
             foreach (var summary in list)
             {
-                Banks.Add(new BankRowViewModel(this, summary, summary.Id == _initialBankId));
+                Banks.Add(new BankRowViewModel(this, summary, summary.Id == currentBankId));
             }
 
             OnPropertyChanged(nameof(HasBanks));
             OnPropertyChanged(nameof(SummaryText));
 
-            WarningMessage = _store.UnreadableFiles.Count == 0
+            WarningMessage = store.UnreadableFiles.Count == 0
                 ? null
-                : $"有 {_store.UnreadableFiles.Count} 个文件无法解析，已跳过：{string.Join("、", _store.UnreadableFiles)}";
+                : $"有 {store.UnreadableFiles.Count} 个文件无法解析，已跳过：{string.Join("、", store.UnreadableFiles)}";
         }
         catch (Exception ex)
         {

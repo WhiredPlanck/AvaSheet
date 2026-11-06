@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json.Serialization;
 
@@ -23,13 +24,15 @@ public sealed class BankProgress
     /// 错题本：做错过的题目 Id。答对后从集合里移除，
     /// 所以这里始终表示"当前还没掌握的题"。
     /// </summary>
-    public List<string> WrongQuestionIds { get; set; } = [];
+    [AllowNull]
+    public List<string> WrongQuestionIds { get; set => field = value ?? []; } = [];
 
     /// <summary>
     /// 平时练习的进度：每个题型各自记下已经做完的题目 Id。
     /// 做过的题不会再出现在下一轮里，清除进度后重新开始。
     /// </summary>
-    public List<PracticeProgressEntry> PracticeProgress { get; set; } = [];
+    [AllowNull]
+    public List<PracticeProgressEntry> PracticeProgress { get; set => field = value ?? []; } = [];
 
     public DateTimeOffset UpdatedAt { get; set; }
 
@@ -45,6 +48,7 @@ public sealed class PracticeProgressEntry
 {
     public QuestionType Type { get; set; }
 
-    /// <summary>这个题型里已经做完的题目 Id。</summary>
-    public List<string> DoneIds { get; set; } = [];
+    /// <summary>这个题型里已经做完的题目 Id。JSON 里的 null 按空列表处理。</summary>
+    [AllowNull]
+    public List<string> DoneIds { get; set => field = value ?? []; } = [];
 }

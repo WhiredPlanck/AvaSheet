@@ -48,11 +48,9 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     private readonly IExamRecordStore? _records;
     private readonly IBankProgressStore? _progressStore;
     private readonly string? _bankId;
-    private readonly string? _initialBankName;
     private readonly IDialogService? _dialogs;
     private readonly Action? _goBack;
 
-    private readonly List<ExamQuestionViewModel> _paper = [];
     private QuestionBank? _bank;
     private DispatcherTimer? _timer;
     private TimeSpan _remaining;
@@ -80,7 +78,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     {
         _store = store;
         _bankId = bankId;
-        _initialBankName = bankName;
+        BankName = bankName;
         _dialogs = dialogs;
         _goBack = goBack;
         _records = records;
@@ -100,7 +98,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         _ => "按题型组卷、限时作答，交卷后统一评分。",
     };
 
-    public string BankName => _bank?.Name ?? _initialBankName ?? "未选择题库";
+    public string BankName => _bank?.Name ?? field ?? "未选择题库";
 
     [ObservableProperty]
     public partial ExamPhase Phase { get; set; } = ExamPhase.Loading;
@@ -429,20 +427,13 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         // 题量没变化时上面的 OnPaperChanged 不会触发，这里兜一次推算时长。
         LimitMinutes = Math.Clamp(PaperSize, 1, 600);
 
-        if (PaperSize == 0)
-        {
-            Phase = ExamPhase.Empty;
-        }
-        else
-        {
-            Phase = ExamPhase.Config;
-        }
+        Phase = PaperSize == 0 ? ExamPhase.Empty : ExamPhase.Config;
 
         NotifyAll();
     }
 
     private int CountOf(QuestionType type) =>
-        _bank?.Questions?.Count(q => q.Type == type) ?? 0;
+        _bank?.Questions.Count(q => q.Type == type) ?? 0;
 
     // ---------------------------------------------------------------- 组卷
 
@@ -454,7 +445,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
             return;
         }
 
-        var questions = _bank.Questions ?? [];
+        var questions = _bank.Questions;
         var paper = new List<Question>();
 
         paper.AddRange(Pick(questions, QuestionType.SingleChoice, SingleCount));
@@ -911,14 +902,14 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     {
         UnauthorizedAccessException => "没有权限读取题库文件，检查一下数据目录的访问权限。",
         InvalidDataException => ex.Message,
-        System.IO.FileNotFoundException => "题库文件不存在，可能已被移动或删除。",
-        System.IO.IOException => $"读写题库失败：{ex.Message}",
+        FileNotFoundException => "题库文件不存在，可能已被移动或删除。",
+        IOException => $"读写题库失败：{ex.Message}",
         _ => $"出现意外错误：{ex.Message}",
     };
 }
 
 /// <summary>卷子上的一道题。</summary>
-public sealed partial class ExamQuestionViewModel : ObservableObject
+public sealed class ExamQuestionViewModel : ObservableObject
 {
     private readonly ExamViewModel _owner;
 
@@ -934,17 +925,15 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
             _ => owner.TrueFalseScore,
         };
 
-        foreach (var choice in question.Choices ?? [])
+        foreach (var choice in question.Choices)
         {
             Options.Add(new ExamOptionViewModel(this, choice.Key, choice.Text));
         }
 
-        if (question.Type == QuestionType.TrueFalse)
-        {
-            // 判断题没有 choices，用固定的两个选项。
-            Options.Add(new ExamOptionViewModel(this, "T", "正确"));
-            Options.Add(new ExamOptionViewModel(this, "F", "错误"));
-        }
+        if (question.Type != QuestionType.TrueFalse) return;
+        // 判断题没有 choices，用固定的两个选项。
+        Options.Add(new ExamOptionViewModel(this, "T", "正确"));
+        Options.Add(new ExamOptionViewModel(this, "F", "错误"));
     }
 
     public Question Question { get; }
@@ -966,9 +955,9 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
 
     public string DifficultyStars => new string('★', Math.Clamp(Question.Difficulty, 1, 5));
 
-    public bool HasTags => (Question.Tags?.Count ?? 0) > 0;
+    public bool HasTags => Question.Tags.Count > 0;
 
-    public string TagsText => string.Join(" · ", Question.Tags ?? []);
+    public string TagsText => string.Join(" · ", Question.Tags);
 
     public bool IsAnswered => Options.Any(o => o.IsSelected);
 
@@ -1047,25 +1036,16 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
 }
 
 /// <summary>卷子上的一个选项。</summary>
-public sealed partial class ExamOptionViewModel : ObservableObject
+public sealed partial class ExamOptionViewModel(ExamQuestionViewModel owner, string key, string text) : ObservableObject
 {
-    private readonly ExamQuestionViewModel _owner;
-
-    public ExamOptionViewModel(ExamQuestionViewModel owner, string key, string text)
-    {
-        _owner = owner;
-        Key = key;
-        Text = text;
-    }
-
-    public string Key { get; }
+    public string Key { get; } = key;
 
     /// <summary>判断题用「正确 / 错误」，不显示 T / F 徽章。</summary>
     public bool HasKey => Key is not ("T" or "F");
 
     public string KeyText => Key;
 
-    public string Text { get; }
+    public string Text { get; } = text;
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
@@ -1076,9 +1056,7 @@ public sealed partial class ExamOptionViewModel : ObservableObject
     /// <summary>答错时把「本该选却没选」的项也标出来。</summary>
     public bool IsMissed => IsCorrectAnswer && !IsSelected;
 
-    public IRelayCommand SelectCommand => _select ??= new RelayCommand(() => _owner.SelectOption(this));
-
-    private IRelayCommand? _select;
+    public IRelayCommand SelectCommand => field ??= new RelayCommand(() => owner.SelectOption(this));
 
     internal void SetSelectedQuiet(bool value) => IsSelected = value;
 
@@ -1090,26 +1068,15 @@ public sealed partial class ExamOptionViewModel : ObservableObject
 }
 
 /// <summary>右侧答题卡上的一个题号。</summary>
-public sealed partial class ExamNavigatorItemViewModel : ObservableObject
+public sealed class ExamNavigatorItemViewModel(ExamViewModel owner, ExamQuestionViewModel question) : ObservableObject
 {
-    private readonly ExamViewModel _owner;
-    private readonly ExamQuestionViewModel _question;
+    public int Number => question.Number;
 
-    public ExamNavigatorItemViewModel(ExamViewModel owner, ExamQuestionViewModel question)
-    {
-        _owner = owner;
-        _question = question;
-    }
+    public bool IsCurrent => owner.CurrentIndex == question.Number - 1;
 
-    public int Number => _question.Number;
+    public bool IsAnswered => question.IsAnswered;
 
-    public bool IsCurrent => _owner.CurrentIndex == _question.Number - 1;
-
-    public bool IsAnswered => _question.IsAnswered;
-
-    public IRelayCommand JumpCommand => _jump ??= new RelayCommand(() => _owner.GoTo(Number - 1));
-
-    private IRelayCommand? _jump;
+    public IRelayCommand JumpCommand => field ??= new RelayCommand(() => owner.GoTo(Number - 1));
 
     internal void Refresh()
     {

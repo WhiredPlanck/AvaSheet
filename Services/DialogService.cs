@@ -10,7 +10,7 @@ namespace ExamSystem.Services;
 /// <summary>
 /// 桌面端的弹窗实现。持有主窗口作为 owner，所以模态窗口居中、跟主窗口一起最小化。
 /// </summary>
-public sealed class DialogService : IDialogService
+public sealed class DialogService(Window owner) : IDialogService
 {
     private static readonly FilePickerFileType BankJsonType = new("题库文件")
     {
@@ -23,13 +23,6 @@ public sealed class DialogService : IDialogService
         Patterns = ["*.json", "*.xlsx"],
         MimeTypes = ["application/json", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
     };
-
-    private readonly Window _owner;
-
-    public DialogService(Window owner)
-    {
-        _owner = owner;
-    }
 
     public async Task<string?> PromptBankNameAsync(
         string title,
@@ -44,13 +37,13 @@ public sealed class DialogService : IDialogService
         };
 
         var dialog = new NameInputWindow { DataContext = viewModel };
-        return await dialog.ShowDialog<string?>(_owner);
+        return await dialog.ShowDialog<string?>(owner);
     }
 
     public async Task<bool> ShowBankManagerAsync(BankManagerViewModel viewModel)
     {
         var dialog = new BankManagerWindow { DataContext = viewModel };
-        return await dialog.ShowDialog<bool>(_owner);
+        return await dialog.ShowDialog<bool>(owner);
     }
 
     public async Task<Question?> EditQuestionAsync(Question? existing)
@@ -60,19 +53,19 @@ public sealed class DialogService : IDialogService
             DataContext = new QuestionEditorViewModel(existing),
         };
 
-        var saved = await dialog.ShowDialog<bool>(_owner);
+        var saved = await dialog.ShowDialog<bool>(owner);
         return saved ? dialog.Result : null;
     }
 
     public Task<bool> ConfirmAsync(string title, string message, string confirmText = "确定", bool destructive = false)
     {
         var dialog = new ConfirmWindow(title, message, confirmText, destructive);
-        return dialog.ShowDialog<bool>(_owner);
+        return dialog.ShowDialog<bool>(owner);
     }
 
     public async Task<IStorageFile?> PickImportFileAsync()
     {
-        var files = await _owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "导入题库",
             AllowMultiple = false,
@@ -84,7 +77,7 @@ public sealed class DialogService : IDialogService
 
     public Task<IStorageFile?> PickExportFileAsync(string suggestedFileName)
     {
-        return _owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        return owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "导出题库",
             SuggestedFileName = suggestedFileName,
@@ -96,7 +89,7 @@ public sealed class DialogService : IDialogService
 
     public async Task<IStorageFile?> PickQuestionImportFileAsync()
     {
-        var files = await _owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "导入题目",
             AllowMultiple = false,
@@ -109,12 +102,12 @@ public sealed class DialogService : IDialogService
     public Task ShowImportResultAsync(ImportResultViewModel viewModel)
     {
         var dialog = new ImportResultWindow { DataContext = viewModel };
-        return dialog.ShowDialog(_owner);
+        return dialog.ShowDialog(owner);
     }
 
     public Task ShowAboutAsync()
     {
         var dialog = new AboutWindow();
-        return dialog.ShowDialog(_owner);
+        return dialog.ShowDialog(owner);
     }
 }

@@ -37,9 +37,7 @@ public static class RenderMode
             return [software];
         }
 
-        var hardware = defaults is null
-            ? Enumerable.Empty<T>()
-            : defaults.Where(mode => !EqualityComparer<T>.Default.Equals(mode, software));
+        var hardware = defaults.Where(mode => !EqualityComparer<T>.Default.Equals(mode, software));
 
         // 平台的默认列表里本来就有软件兜底，去掉后重新追加，保证它排在最后。
         return [.. hardware, software];

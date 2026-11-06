@@ -17,8 +17,7 @@ public sealed record ExcelRowError(int Row, string Message);
 /// <summary>一次 Excel 导入的结果：成功的题目 + 被跳过的行。</summary>
 public sealed record ExcelQuestionImportResult(
     IReadOnlyList<Question> Questions,
-    IReadOnlyList<ExcelRowError> Errors,
-    int DataRowCount);
+    IReadOnlyList<ExcelRowError> Errors);
 
 /// <summary>
 /// 轻量 .xlsx 读取器：只用 <see cref="ZipArchive"/> + <see cref="XmlReader"/>，
@@ -73,10 +72,6 @@ public static class QuestionExcelReader
         return archive.Entries.FirstOrDefault(
             e => string.Equals(e.FullName, path, StringComparison.OrdinalIgnoreCase));
     }
-
-    private static ZipArchiveEntry? FindEntryEndingWith(ZipArchive archive, string suffix)
-        => archive.Entries.FirstOrDefault(
-            e => e.FullName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
 
     private static string ResolveFirstSheetPath(ZipArchive archive)
     {
@@ -169,10 +164,12 @@ public static class QuestionExcelReader
             return [];
         }
 
-        return document.Descendants()
-            .Where(e => e.Name.LocalName == "si")
-            .Select(ItemText)
-            .ToList();
+        return
+        [
+            .. document.Descendants()
+                .Where(e => e.Name.LocalName == "si")
+                .Select(ItemText)
+        ];
     }
 
     /// <summary>共享字符串或内联字符串的文本；富文本由多个 &lt;r&gt;&lt;t&gt; 拼起来。</summary>
@@ -181,18 +178,12 @@ public static class QuestionExcelReader
 
     // ---------- 单元格 ----------
 
-    private sealed class SheetRow
+    private sealed class SheetRow(int number, Dictionary<int, string> cells)
     {
-        public SheetRow(int number, Dictionary<int, string> cells)
-        {
-            Number = number;
-            Cells = cells;
-        }
-
-        public int Number { get; }
+        public int Number { get; } = number;
 
         /// <summary>列号（0 = A）到文本。</summary>
-        public Dictionary<int, string> Cells { get; }
+        public Dictionary<int, string> Cells { get; } = cells;
 
         public string Get(int? column) => column is { } c && Cells.TryGetValue(c, out var text) ? text : "";
     }
@@ -210,7 +201,7 @@ public static class QuestionExcelReader
 
         while (!reader.EOF)
         {
-            if (reader.NodeType == XmlNodeType.Element && reader.LocalName == "row" && !reader.IsEmptyElement)
+            if (reader is { NodeType: XmlNodeType.Element, LocalName: "row", IsEmptyElement: false })
             {
                 // ReadFrom 会把读取器移到该元素之后，所以这里不能再次 Read()，
                 // 否则会跳过紧随其后的下一个 <row>。
@@ -335,7 +326,6 @@ public static class QuestionExcelReader
 
         var questions = new List<Question>();
         var errors = new List<ExcelRowError>();
-        var dataRowCount = 0;
 
         for (var i = headerIndex + 1; i < rows.Count; i++)
         {
@@ -345,7 +335,6 @@ public static class QuestionExcelReader
                 continue;
             }
 
-            dataRowCount++;
             if (TryBuildQuestion(row, map, out var question, out var error))
             {
                 questions.Add(question);
@@ -356,7 +345,7 @@ public static class QuestionExcelReader
             }
         }
 
-        return new ExcelQuestionImportResult(questions, errors, dataRowCount);
+        return new ExcelQuestionImportResult(questions, errors);
     }
 
     private static ColumnMap MapHeader(SheetRow row)
@@ -395,10 +384,9 @@ public static class QuestionExcelReader
             {
                 map.Tags = column;
             }
-            else if (map.Choices.Count < MaxChoices && TryChoiceLetter(header) is { } letter
-                     && !map.Choices.ContainsKey(letter))
+            else if (map.Choices.Count < MaxChoices && TryChoiceLetter(header) is { } letter)
             {
-                map.Choices[letter] = column;
+                map.Choices.TryAdd(letter, column);
             }
         }
 
@@ -410,14 +398,12 @@ public static class QuestionExcelReader
 
     private static char? TryChoiceLetter(string header)
     {
-        if (header.Length == 1 && header[0] is >= 'A' and <= 'H')
+        switch (header)
         {
-            return header[0];
-        }
-
-        if (header.Length == 1 && header[0] is >= 'a' and <= 'h')
-        {
-            return char.ToUpperInvariant(header[0]);
+            case [>= 'A' and <= 'H']:
+                return header[0];
+            case [>= 'a' and <= 'h']:
+                return char.ToUpperInvariant(header[0]);
         }
 
         // 「选项A」「A选项」

@@ -4,10 +4,8 @@ using CommunityToolkit.Mvvm.Input;
 namespace ExamSystem.ViewModels;
 
 /// <summary>首页：三个主入口，加上「管理题目」「考试记录」两个次要入口。</summary>
-public partial class HomeViewModel : ViewModelBase
+public partial class HomeViewModel(Action<PageKind>? navigate) : ViewModelBase
 {
-    private readonly Action<PageKind>? _navigate;
-
     private int _wrongBookCount;
     private int _recordCount;
     private double? _lastScore;
@@ -17,11 +15,6 @@ public partial class HomeViewModel : ViewModelBase
     public HomeViewModel()
         : this(null)
     {
-    }
-
-    public HomeViewModel(Action<PageKind>? navigate)
-    {
-        _navigate = navigate;
     }
 
     public string Headline => "开始今天的练习";
@@ -42,19 +35,19 @@ public partial class HomeViewModel : ViewModelBase
             : $"已记录 {_recordCount} 次考试。";
 
     [RelayCommand]
-    private void OpenExam() => _navigate?.Invoke(PageKind.Exam);
+    private void OpenExam() => navigate?.Invoke(PageKind.Exam);
 
     [RelayCommand]
-    private void OpenPractice() => _navigate?.Invoke(PageKind.Practice);
+    private void OpenPractice() => navigate?.Invoke(PageKind.Practice);
 
     [RelayCommand]
-    private void OpenWrongBook() => _navigate?.Invoke(PageKind.WrongBook);
+    private void OpenWrongBook() => navigate?.Invoke(PageKind.WrongBook);
 
     [RelayCommand]
-    private void OpenQuestions() => _navigate?.Invoke(PageKind.Questions);
+    private void OpenQuestions() => navigate?.Invoke(PageKind.Questions);
 
     [RelayCommand]
-    private void OpenRecords() => _navigate?.Invoke(PageKind.Records);
+    private void OpenRecords() => navigate?.Invoke(PageKind.Records);
 
     /// <summary>题库或错题数变化后刷新卡片上的动态文案。</summary>
     public void RefreshBankInfo(int wrongBookCount)

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace ExamSystem.Services;
 
@@ -42,24 +43,11 @@ public static class AppPaths
             return false;
         }
 
-        foreach (var c in id)
-        {
-            if (!char.IsAsciiLetterOrDigit(c) && c != '_' && c != '-')
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return id.All(c => char.IsAsciiLetterOrDigit(c) || c == '_' || c == '-');
     }
 
-    public static string BankFilePath(string id)
-    {
-        if (!IsValidBankId(id))
-        {
-            throw new ArgumentException($"非法的题库 Id：{id}", nameof(id));
-        }
-
-        return Path.Combine(BanksDirectory, id + ".json");
-    }
+    public static string BankFilePath(string id) =>
+        IsValidBankId(id)
+            ? Path.Combine(BanksDirectory, id + ".json")
+            : throw new ArgumentException($"非法的题库 Id：{id}", nameof(id));
 }

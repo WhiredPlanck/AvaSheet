@@ -10,7 +10,7 @@ public sealed class ImportResultViewModel : ViewModelBase
 {
     public ImportResultViewModel(int importedCount, IReadOnlyList<ExcelRowError> errors, int duplicateCount = 0)
     {
-        Errors = new ObservableCollection<ImportErrorRowViewModel>(errors.Select(e => new ImportErrorRowViewModel(e)));
+        Errors = [.. errors.Select(e => new ImportErrorRowViewModel(e))];
 
         var skipped = new List<string>();
         if (duplicateCount > 0)
@@ -49,17 +49,11 @@ public sealed class ImportResultViewModel : ViewModelBase
 }
 
 /// <summary>一行导入失败的说明。</summary>
-public sealed class ImportErrorRowViewModel
+public sealed class ImportErrorRowViewModel(ExcelRowError error)
 {
-    public ImportErrorRowViewModel(ExcelRowError error)
-    {
-        Row = error.Row;
-        Message = error.Message;
-    }
-
-    public int Row { get; }
+    public int Row { get; } = error.Row;
 
     public string RowText => $"第 {Row} 行";
 
-    public string Message { get; }
+    public string Message { get; } = error.Message;
 }

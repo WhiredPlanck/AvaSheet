@@ -32,9 +32,7 @@ internal sealed partial class JsonContext : JsonSerializerContext
     /// 必须惰性初始化：静态字段按文本顺序执行，这里若在类型初始化阶段就读 Default，
     /// 拿到的会是 null，退回成"无缩进、PascalCase、枚举数字"的默认配置。
     /// </summary>
-    public static JsonSerializerOptions Io => _io ??= CreateIoOptions();
-
-    private static JsonSerializerOptions? _io;
+    public static JsonSerializerOptions Io => field ??= CreateIoOptions();
 
     private static JsonSerializerOptions CreateIoOptions()
     {
@@ -49,21 +47,15 @@ internal sealed partial class JsonContext : JsonSerializerContext
     // RequiresDynamicCode（IL2026 / IL3050），带 JsonTypeInfo 的重载则不会：
     // 类型信息全部来自源生成上下文，裁剪后不需要任何反射或运行时代码生成。
 
-    public static JsonTypeInfo<QuestionBank> QuestionBankInfo => _questionBank ??= Get<QuestionBank>();
+    public static JsonTypeInfo<QuestionBank> QuestionBankInfo => field ??= Get<QuestionBank>();
 
-    public static JsonTypeInfo<AppSettings> AppSettingsInfo => _appSettings ??= Get<AppSettings>();
+    public static JsonTypeInfo<AppSettings> AppSettingsInfo => field ??= Get<AppSettings>();
 
-    public static JsonTypeInfo<List<Question>> QuestionListInfo => _questionList ??= Get<List<Question>>();
+    public static JsonTypeInfo<List<Question>> QuestionListInfo => field ??= Get<List<Question>>();
 
-    public static JsonTypeInfo<List<ExamRecord>> ExamRecordListInfo => _examRecordList ??= Get<List<ExamRecord>>();
+    public static JsonTypeInfo<List<ExamRecord>> ExamRecordListInfo => field ??= Get<List<ExamRecord>>();
 
-    public static JsonTypeInfo<BankProgress> BankProgressInfo => _bankProgress ??= Get<BankProgress>();
-
-    private static JsonTypeInfo<QuestionBank>? _questionBank;
-    private static JsonTypeInfo<AppSettings>? _appSettings;
-    private static JsonTypeInfo<List<Question>>? _questionList;
-    private static JsonTypeInfo<List<ExamRecord>>? _examRecordList;
-    private static JsonTypeInfo<BankProgress>? _bankProgress;
+    public static JsonTypeInfo<BankProgress> BankProgressInfo => field ??= Get<BankProgress>();
 
     private static JsonTypeInfo<T> Get<T>() => (JsonTypeInfo<T>)Io.GetTypeInfo(typeof(T))!;
 }

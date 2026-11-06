@@ -1,5 +1,3 @@
-using System;
-
 namespace ExamSystem.Services;
 
 /// <summary>软件名称与版本号。版本号来自项目文件里的 &lt;Version&gt;，不在代码里重复写。</summary>

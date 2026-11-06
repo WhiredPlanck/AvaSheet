@@ -27,30 +27,19 @@ public enum ExamRecordsPhase
 ///
 /// 记录里存的是题目快照，所以题库改了、删了也能照常回看。
 /// </summary>
-public sealed partial class ExamRecordsViewModel : PageViewModelBase
+public sealed partial class ExamRecordsViewModel(
+    IExamRecordStore? store,
+    IDialogService? dialogs,
+    Action? goBack = null,
+    Action? openExam = null)
+    : PageViewModelBase(goBack)
 {
-    private readonly IExamRecordStore? _store;
-    private readonly IDialogService? _dialogs;
-    private readonly Action? _openExam;
-
     private bool _initialized;
 
     /// <summary>供 XAML 预览器使用。</summary>
     public ExamRecordsViewModel()
         : this(null, null)
     {
-    }
-
-    public ExamRecordsViewModel(
-        IExamRecordStore? store,
-        IDialogService? dialogs,
-        Action? goBack = null,
-        Action? openExam = null)
-        : base(goBack)
-    {
-        _store = store;
-        _dialogs = dialogs;
-        _openExam = openExam;
     }
 
     public override string Title => "考试记录";
@@ -106,7 +95,7 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
     public async Task ReloadAsync()
     {
-        if (_store is null)
+        if (store is null)
         {
             Phase = ExamRecordsPhase.Empty;
             return;
@@ -114,7 +103,7 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
         try
         {
-            var records = await _store.ListAsync();
+            var records = await store.ListAsync();
 
             Records.Clear();
             foreach (var record in records)
@@ -136,13 +125,13 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
     private async Task DeleteRowAsync(ExamRecordRowViewModel row)
     {
-        if (_store is null)
+        if (store is null)
         {
             return;
         }
 
-        if (_dialogs is not null &&
-            !await _dialogs.ConfirmAsync(
+        if (dialogs is not null &&
+            !await dialogs.ConfirmAsync(
                 "删除考试记录",
                 $"确定删除「{row.BankName}」{row.DateText} 的这次成绩吗？删除后不能恢复。",
                 "删除",
@@ -153,7 +142,7 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
         try
         {
-            await _store.DeleteAsync(row.Record.Id);
+            await store.DeleteAsync(row.Record.Id);
             await ReloadAsync();
         }
         catch (Exception ex)
@@ -166,13 +155,13 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
     [RelayCommand]
     private async Task ClearAllAsync()
     {
-        if (_store is null || Records.Count == 0)
+        if (store is null || Records.Count == 0)
         {
             return;
         }
 
-        if (_dialogs is not null &&
-            !await _dialogs.ConfirmAsync(
+        if (dialogs is not null &&
+            !await dialogs.ConfirmAsync(
                 "清空考试记录",
                 $"共 {Records.Count} 条记录会被永久删除，确定吗？",
                 "全部删除",
@@ -183,7 +172,7 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
 
         try
         {
-            await _store.ClearAsync();
+            await store.ClearAsync();
             await ReloadAsync();
         }
         catch (Exception ex)
@@ -194,7 +183,7 @@ public sealed partial class ExamRecordsViewModel : PageViewModelBase
     }
 
     [RelayCommand]
-    private void OpenExam() => _openExam?.Invoke();
+    private void OpenExam() => openExam?.Invoke();
 
     private void NotifyStats()
     {        OnPropertyChanged(nameof(IsLoading));
@@ -300,17 +289,11 @@ public sealed partial class ExamRecordRowViewModel : ObservableObject
 }
 
 /// <summary>记录详情里的一道题。</summary>
-public sealed class ExamRecordAnswerViewModel
+public sealed class ExamRecordAnswerViewModel(ExamRecordAnswer answer, int number)
 {
-    public ExamRecordAnswerViewModel(ExamRecordAnswer answer, int number)
-    {
-        Answer = answer;
-        Number = number;
-    }
+    public ExamRecordAnswer Answer { get; } = answer;
 
-    public ExamRecordAnswer Answer { get; }
-
-    public int Number { get; }
+    public int Number { get; } = number;
 
     public string TypeShort => Answer.Type.ToShortLabel();
 

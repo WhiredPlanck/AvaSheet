@@ -13,15 +13,8 @@ namespace ExamSystem.Services;
 /// 题库文件的导入导出。全部构建在 <see cref="IBankStore"/> 之上：
 /// 导出 = LoadAsync + 写目标流；导入 = 校验 + 换新 Id + 一次 SaveAsync。
 /// </summary>
-public sealed class BankTransfer
+public sealed class BankTransfer(IBankStore store)
 {
-    private readonly IBankStore _store;
-
-    public BankTransfer(IBankStore store)
-    {
-        _store = store;
-    }
-
     /// <summary>导入一个题库文件，返回落库后的摘要。</summary>
     public async Task<BankSummary> ImportAsync(Stream stream, CancellationToken ct = default)
     {
@@ -48,10 +41,9 @@ public sealed class BankTransfer
                 $"题库版本 {bank.SchemaVersion} 高于当前程序支持的 {QuestionBank.CurrentSchemaVersion}，请升级程序后再导入。");
         }
 
-        bank.Questions ??= [];
         NormalizeQuestions(bank);
 
-        var existing = await _store.ListAsync(ct).ConfigureAwait(false);
+        var existing = await store.ListAsync(ct).ConfigureAwait(false);
         var name = string.IsNullOrWhiteSpace(bank.Name) ? "导入的题库" : bank.Name.Trim();
         if (existing.Any(b => string.Equals(b.Name, name, StringComparison.CurrentCultureIgnoreCase)))
         {
@@ -67,7 +59,7 @@ public sealed class BankTransfer
             bank.CreatedAt = now;
         }
 
-        await _store.SaveAsync(bank, ct).ConfigureAwait(false);
+        await store.SaveAsync(bank, ct).ConfigureAwait(false);
 
         return new BankSummary(bank.Id, bank.Name, bank.Description, bank.Questions.Count, bank.UpdatedAt);
     }
@@ -75,7 +67,7 @@ public sealed class BankTransfer
     /// <summary>把一个题库写到目标流。</summary>
     public async Task ExportAsync(string id, Stream target, CancellationToken ct = default)
     {
-        var bank = await _store.LoadAsync(id, ct).ConfigureAwait(false)
+        var bank = await store.LoadAsync(id, ct).ConfigureAwait(false)
                    ?? throw new FileNotFoundException("题库不存在，可能已被删除。");
 
         await JsonSerializer.SerializeAsync(target, bank, JsonContext.QuestionBankInfo, ct).ConfigureAwait(false);
@@ -92,26 +84,15 @@ public sealed class BankTransfer
 
         foreach (var question in bank.Questions)
         {
-            if (question is null)
-            {
-                continue;
-            }
-
-            question.Choices ??= [];
-            question.Answers ??= [];
-            question.Tags ??= [];
-            question.Stem ??= "";
-            question.Choices.RemoveAll(c => c is null || string.IsNullOrWhiteSpace(c.Key));
+            question.Choices.RemoveAll(c => string.IsNullOrWhiteSpace(c.Key));
             question.Answers = [.. question.Answers
                 .Where(a => !string.IsNullOrWhiteSpace(a))
                 .Select(a => a.Trim())];
             question.Difficulty = Math.Clamp(question.Difficulty, 1, 5);
 
-            if (string.IsNullOrWhiteSpace(question.Id) || !used.Add(question.Id))
-            {
-                question.Id = "q_" + Guid.NewGuid().ToString("N")[..10];
-                used.Add(question.Id);
-            }
+            if (!string.IsNullOrWhiteSpace(question.Id) && used.Add(question.Id)) continue;
+            question.Id = "q_" + Guid.NewGuid().ToString("N")[..10];
+            used.Add(question.Id);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ExamSystem.Models;
 
@@ -11,12 +12,14 @@ namespace ExamSystem.Models;
 /// </summary>
 public sealed class ExamRecord
 {
-    public string Id { get; set; } = "";
+    [AllowNull]
+    public string Id { get; set => field = value ?? ""; } = "";
 
     /// <summary>考的是哪个库。库被删掉后这个 Id 就找不到了，靠 BankName 显示。</summary>
     public string? BankId { get; set; }
 
-    public string BankName { get; set; } = "";
+    [AllowNull]
+    public string BankName { get; set => field = value ?? ""; } = "";
 
     public DateTimeOffset StartedAt { get; set; }
 
@@ -43,23 +46,29 @@ public sealed class ExamRecord
 
     public int UnansweredCount { get; set; }
 
-    public List<ExamRecordAnswer> Answers { get; set; } = [];
+    /// <summary>逐题作答快照。JSON 里的 null 按空列表处理。</summary>
+    [AllowNull]
+    public List<ExamRecordAnswer> Answers { get; set => field = value ?? []; } = [];
 }
 
 /// <summary>成绩单里一道题的作答记录。</summary>
 public sealed class ExamRecordAnswer
 {
-    public string QuestionId { get; set; } = "";
+    [AllowNull]
+    public string QuestionId { get; set => field = value ?? ""; } = "";
 
     public QuestionType Type { get; set; }
 
-    public string Stem { get; set; } = "";
+    [AllowNull]
+    public string Stem { get; set => field = value ?? ""; } = "";
 
-    /// <summary>用户选的选项键，判断题是 T / F。</summary>
-    public List<string> Selected { get; set; } = [];
+    /// <summary>用户选的选项键，判断题是 T / F。JSON 里的 null 按空列表处理。</summary>
+    [AllowNull]
+    public List<string> Selected { get; set => field = value ?? []; } = [];
 
-    /// <summary>正确答案的选项键。</summary>
-    public List<string> Correct { get; set; } = [];
+    /// <summary>正确答案的选项键。JSON 里的 null 按空列表处理。</summary>
+    [AllowNull]
+    public List<string> Correct { get; set => field = value ?? []; } = [];
 
     public bool IsAnswered { get; set; }
 

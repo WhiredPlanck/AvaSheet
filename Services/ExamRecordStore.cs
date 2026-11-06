@@ -16,12 +16,11 @@ namespace ExamSystem.Services;
 /// 超出时丢掉交卷时间最早的。写文件走临时文件 + 原子替换，
 /// 避免断电或崩溃留下半个 JSON。
 /// </summary>
-public sealed class ExamRecordStore : IExamRecordStore
+public sealed class ExamRecordStore(string file) : IExamRecordStore
 {
     /// <summary>最多保留多少条记录。</summary>
     public const int MaxRecords = 200;
 
-    private readonly string _file;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private List<ExamRecord>? _cache;
@@ -31,15 +30,10 @@ public sealed class ExamRecordStore : IExamRecordStore
     {
     }
 
-    public ExamRecordStore(string file)
-    {
-        _file = file;
-    }
-
     public async Task<IReadOnlyList<ExamRecord>> ListAsync()
     {
         var records = await LoadAsync();
-        return records.OrderByDescending(r => r.FinishedAt).ToList();
+        return [.. records.OrderByDescending(r => r.FinishedAt)];
     }
 
     public async Task SaveAsync(ExamRecord record)
@@ -109,7 +103,7 @@ public sealed class ExamRecordStore : IExamRecordStore
             return _cache;
         }
 
-        if (!File.Exists(_file))
+        if (!File.Exists(file))
         {
             return _cache = [];
         }
@@ -117,15 +111,10 @@ public sealed class ExamRecordStore : IExamRecordStore
         try
         {
             await using var stream = new FileStream(
-                _file, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
+                file, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
 
             var records = await JsonSerializer.DeserializeAsync(stream, JsonContext.ExamRecordListInfo)
                           ?? [];
-
-            foreach (var record in records)
-            {
-                record.Answers ??= [];
-            }
 
             return _cache = records;
         }
@@ -138,13 +127,13 @@ public sealed class ExamRecordStore : IExamRecordStore
 
     private async Task WriteAsync(List<ExamRecord> records)
     {
-        var directory = Path.GetDirectoryName(_file);
+        var directory = Path.GetDirectoryName(file);
         if (!string.IsNullOrEmpty(directory))
         {
             Directory.CreateDirectory(directory);
         }
 
         var json = JsonSerializer.Serialize(records, JsonContext.ExamRecordListInfo);
-        await AtomicFile.WriteAllTextAsync(_file, json).ConfigureAwait(false);
+        await AtomicFile.WriteAllTextAsync(file, json).ConfigureAwait(false);
     }
 }

@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ExamSystem.Models;
@@ -34,7 +33,6 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
     private readonly IBankStore? _store;
     private readonly IDialogService? _dialogs;
     private readonly string? _bankId;
-    private readonly string? _initialBankName;
 
     private readonly List<Question> _all = [];
     private QuestionBank? _bank;
@@ -56,7 +54,7 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
         _store = store;
         _dialogs = dialogs;
         _bankId = bankId;
-        _initialBankName = bankName;
+        BankName = bankName;
     }
 
     public ObservableCollection<QuestionRowViewModel> Questions { get; } = [];
@@ -67,7 +65,7 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
         ? "选择一个题库后，就可以在这里维护里面的题目。"
         : StatsText;
 
-    public string BankName => _bank?.Name ?? _initialBankName ?? "未选择题库";
+    public string BankName => _bank?.Name ?? field ?? "未选择题库";
 
     public bool HasBank => _bank is not null;
 
@@ -188,7 +186,7 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
 
     private void ApplyFilter()
     {
-        var keyword = SearchText?.Trim() ?? "";
+        var keyword = SearchText.Trim();
 
         IEnumerable<Question> query = _all;
         if (Filter != QuestionFilterKind.All)
@@ -591,14 +589,11 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
 
         foreach (var question in list)
         {
-            question.Choices ??= [];
-            question.Answers ??= [];
-            question.Tags ??= [];
-            question.Stem = question.Stem?.Trim() ?? "";
+            question.Stem = question.Stem.Trim();
             question.Difficulty = Math.Clamp(question.Difficulty, 1, 5);
         }
 
-        return list.Where(q => q.Stem.Length > 0).ToList();
+        return [.. list.Where(q => q.Stem.Length > 0)];
     }
 
     // ---------------------------------------------------------------- 落盘
@@ -693,17 +688,14 @@ public sealed partial class QuestionManageViewModel : PageViewModelBase
 }
 
 /// <summary>题目列表里的一行。</summary>
-public sealed partial class QuestionRowViewModel : ObservableObject
+public sealed class QuestionRowViewModel : ObservableObject
 {
-    private readonly QuestionManageViewModel _owner;
-
     public QuestionRowViewModel(QuestionManageViewModel owner, Question question, int number)
     {
-        _owner = owner;
         Question = question;
         Number = number;
-        EditCommand = new AsyncRelayCommand(() => _owner.EditAsync(this));
-        DeleteCommand = new AsyncRelayCommand(() => _owner.DeleteAsync(this));
+        EditCommand = new AsyncRelayCommand(() => owner.EditAsync(this));
+        DeleteCommand = new AsyncRelayCommand(() => owner.DeleteAsync(this));
     }
 
     public Question Question { get; }

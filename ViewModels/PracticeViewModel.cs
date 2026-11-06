@@ -46,7 +46,6 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     private readonly IBankStore? _store;
     private readonly IBankProgressStore? _progressStore;
     private readonly string? _bankId;
-    private readonly string? _initialBankName;
     private readonly Action? _goBack;
     private readonly Action? _openPractice;
     private readonly bool _wrongBookEntry;
@@ -98,7 +97,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         _store = store;
         _progressStore = progress;
         _bankId = bankId;
-        _initialBankName = bankName;
+        BankName = bankName;
         _goBack = goBack;
         _wrongBookEntry = startWrongOnly;
         _openPractice = openPractice;
@@ -131,7 +130,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
             _ => "做错的题会自动收进错题本。",
         };
 
-    public string BankName => _bank?.Name ?? _initialBankName ?? "未选择题库";
+    public string BankName => _bank?.Name ?? field ?? "未选择题库";
 
     [ObservableProperty]
     public partial PracticePhase Phase { get; set; } = PracticePhase.Loading;
@@ -796,15 +795,17 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         {
             var alive = _bank.Questions.Select(q => q.Id).ToHashSet(StringComparer.Ordinal);
             _progress.WrongQuestionIds = [.. _wrongIds.Where(alive.Contains)];
-            _progress.PracticeProgress = _done
-                .Where(pair => pair.Value.Count > 0)
-                .OrderBy(pair => pair.Key)
-                .Select(pair => new PracticeProgressEntry
-                {
-                    Type = pair.Key,
-                    DoneIds = [.. pair.Value.Where(alive.Contains)],
-                })
-                .ToList();
+            _progress.PracticeProgress =
+            [
+                .. _done
+                    .Where(pair => pair.Value.Count > 0)
+                    .OrderBy(pair => pair.Key)
+                    .Select(pair => new PracticeProgressEntry
+                    {
+                        Type = pair.Key,
+                        DoneIds = [.. pair.Value.Where(alive.Contains)],
+                    })
+            ];
 
             if (_progressStore is not null)
             {
@@ -955,14 +956,9 @@ public sealed partial class PracticeOptionViewModel : ObservableObject
 }
 
 /// <summary>练习页答题卡上的一个号码，只显示状态，不能点击跳题。</summary>
-public sealed partial class PracticeNavItemViewModel : ObservableObject
+public sealed partial class PracticeNavItemViewModel(int number) : ObservableObject
 {
-    public PracticeNavItemViewModel(int number)
-    {
-        Number = number;
-    }
-
-    public int Number { get; }
+    public int Number { get; } = number;
 
     [ObservableProperty]
     public partial bool IsCurrent { get; set; }

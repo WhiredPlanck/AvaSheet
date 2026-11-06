@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace ExamSystem.Models;
@@ -19,11 +20,13 @@ public sealed class QuestionBank
     /// 题库 Id 就是文件名，不写进 JSON，避免内容和文件名不一致。
     /// </summary>
     [JsonIgnore]
-    public string Id { get; set; } = "";
+    [AllowNull]
+    public string Id { get; set => field = value ?? ""; } = "";
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
-    public string Name { get; set; } = "";
+    [AllowNull]
+    public string Name { get; set => field = value ?? ""; } = "";
 
     public string? Description { get; set; }
 
@@ -31,5 +34,10 @@ public sealed class QuestionBank
 
     public DateTimeOffset UpdatedAt { get; set; }
 
-    public List<Question> Questions { get; set; } = [];
+    /// <summary>
+    /// 题目。JSON 里显式写 null 时按空列表处理：反序列化不看可空注解，
+    /// 所以兜底必须放在 setter 里，读出来才保证非空。
+    /// </summary>
+    [AllowNull]
+    public List<Question> Questions { get; set => field = value ?? []; } = [];
 }

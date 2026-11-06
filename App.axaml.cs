@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -14,7 +13,7 @@ using ExamSystem.Views;
 
 namespace ExamSystem;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {

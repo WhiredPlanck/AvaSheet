@@ -9,15 +9,8 @@ using ExamSystem.Models;
 namespace ExamSystem.Services;
 
 /// <summary>settings.json 的读写。读写失败不影响主流程，一律吞掉并回落到默认值。</summary>
-public sealed class AppSettingsStore
+public sealed class AppSettingsStore(string path)
 {
-    private readonly string _path;
-
-    public AppSettingsStore(string path)
-    {
-        _path = path;
-    }
-
     public AppSettingsStore()
         : this(AppPaths.SettingsFile)
     {
@@ -52,13 +45,13 @@ public sealed class AppSettingsStore
     {
         try
         {
-            if (!File.Exists(_path))
+            if (!File.Exists(path))
             {
                 Current = new AppSettings();
                 return Current;
             }
 
-            var text = await File.ReadAllTextAsync(_path, Encoding.UTF8, ct).ConfigureAwait(false);
+            var text = await File.ReadAllTextAsync(path, Encoding.UTF8, ct).ConfigureAwait(false);
             Current = JsonSerializer.Deserialize(text, JsonContext.AppSettingsInfo) ?? new AppSettings();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
@@ -73,9 +66,9 @@ public sealed class AppSettingsStore
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var json = JsonSerializer.Serialize(Current, JsonContext.AppSettingsInfo);
-            await AtomicFile.WriteAllTextAsync(_path, json, ct).ConfigureAwait(false);
+            await AtomicFile.WriteAllTextAsync(path, json, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
