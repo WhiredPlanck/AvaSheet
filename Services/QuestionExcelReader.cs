@@ -89,7 +89,7 @@ public static class QuestionExcelReader
         return null;
     }
 
-    /// <summary>读取第一个工作表并按表头映射成题目。</summary>
+    /// <summary>读取第一个工作表并按表头映射成题目，格式按文件内容判断。</summary>
     public static ExcelQuestionImportResult Read(Stream stream)
         => Read(stream, DetectWorkbookType(stream, null) ?? ExcelWorkbookType.ExcelXml);
 
@@ -242,12 +242,14 @@ public static class QuestionExcelReader
             scanned++;
 
             var candidate = MapHeader(rows[i]);
-            if (candidate.Stem is not null && candidate.Answer is not null)
+            if (candidate.Stem is null || candidate.Answer is null)
             {
-                headerIndex = i;
-                map = candidate;
-                break;
+                continue;
             }
+
+            headerIndex = i;
+            map = candidate;
+            break;
         }
 
         if (map is null)
@@ -325,8 +327,7 @@ public static class QuestionExcelReader
         return map;
     }
 
-    private static string NormalizeHeader(string raw)
-        => new string(raw.Where(ch => !char.IsWhiteSpace(ch)).ToArray());
+    private static string NormalizeHeader(string raw) => new(raw.Where(ch => !char.IsWhiteSpace(ch)).ToArray());
 
     private static char? TryChoiceLetter(string header)
     {
@@ -432,34 +433,37 @@ public static class QuestionExcelReader
             }
 
             var available = choices.Select(c => c.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var missing = keys.FirstOrDefault(k => !available.Contains(k));
-            if (missing is not null)
+            var distinct = new List<string>();
+
+            foreach (var key in keys)
             {
-                error = $"答案 {missing} 不在选项里。";
-                return false;
+                if (!available.TryGetValue(key, out var actual))
+                {
+                    error = $"答案 {key} 不在选项里。";
+                    return false;
+                }
+
+                if (!distinct.Contains(actual, StringComparer.OrdinalIgnoreCase))
+                {
+                    distinct.Add(actual);
+                }
             }
 
+            // 单选按用户写出的标识个数判断，写成 A,A 也算错。
             if (type == QuestionType.SingleChoice && keys.Count != 1)
             {
                 error = "单选题需要且只能有一个正确答案。";
                 return false;
             }
 
-            if (type == QuestionType.MultipleChoice && keys.Count < 2)
+            // 多选按去重后的答案个数判断，A,A 只有一个有效答案。
+            if (type == QuestionType.MultipleChoice && distinct.Count < 2)
             {
                 error = "多选题至少要有两个正确答案。";
                 return false;
             }
 
-            answers = [];
-            foreach (var key in keys)
-            {
-                var actual = choices.First(c => string.Equals(c.Key, key, StringComparison.OrdinalIgnoreCase)).Key;
-                if (!answers.Contains(actual, StringComparer.OrdinalIgnoreCase))
-                {
-                    answers.Add(actual);
-                }
-            }
+            answers = distinct;
         }
 
         question = new Question
@@ -485,22 +489,18 @@ public static class QuestionExcelReader
         foreach (var token in NormalizeFullWidth(text).Split(AnswerSeparators, StringSplitOptions.RemoveEmptyEntries))
         {
             var value = token.Trim();
-            if (value.Length == 0)
+            switch (value.Length)
             {
-                continue;
-            }
-
-            if (value.Length > 1 && value.All(ch => ch is >= 'A' and <= 'H'))
-            {
-                keys.AddRange(value.Select(ch => ch.ToString()));
-            }
-            else if (value.Length == 1 && char.ToUpperInvariant(value[0]) is >= 'A' and <= 'H')
-            {
-                keys.Add(char.ToUpperInvariant(value[0]).ToString());
-            }
-            else
-            {
-                return [];
+                case 0:
+                    continue;
+                case > 1 when value.All(ch => ch is >= 'A' and <= 'H'):
+                    keys.AddRange(value.Select(ch => ch.ToString()));
+                    break;
+                case 1 when char.ToUpperInvariant(value[0]) is >= 'A' and <= 'H':
+                    keys.Add(char.ToUpperInvariant(value[0]).ToString());
+                    break;
+                default:
+                    return [];
             }
         }
 
