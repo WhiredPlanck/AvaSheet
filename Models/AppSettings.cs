@@ -14,4 +14,7 @@ public sealed class AppSettings
     /// 那种情况 Avalonia 回退不了。改动在下次启动时生效。
     /// </summary>
     public bool HardwareAcceleration { get; set; }
+
+    /// <summary>界面深浅主题，默认跟随系统。</summary>
+    public ThemeMode Theme { get; set; } = ThemeMode.System;
 }

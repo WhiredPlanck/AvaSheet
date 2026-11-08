@@ -76,6 +76,24 @@
                         VerticalAlignment="Center">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuItem Header="外观">
+                                <MenuItem Header="跟随系统"
+                                          ToggleType="Radio"
+                                          GroupName="ThemeMode"
+                                          IsChecked="{Binding IsThemeSystem}"
+                                          Command="{Binding UseSystemThemeCommand}" />
+                                <MenuItem Header="浅色"
+                                          ToggleType="Radio"
+                                          GroupName="ThemeMode"
+                                          IsChecked="{Binding IsThemeLight}"
+                                          Command="{Binding UseLightThemeCommand}" />
+                                <MenuItem Header="深色"
+                                          ToggleType="Radio"
+                                          GroupName="ThemeMode"
+                                          IsChecked="{Binding IsThemeDark}"
+                                          Command="{Binding UseDarkThemeCommand}" />
+                            </MenuItem>
+                            <Separator />
                             <MenuItem Header="{Binding HardwareAccelerationMenuText}"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding HardwareAcceleration, Mode=TwoWay}"

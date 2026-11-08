@@ -155,6 +155,12 @@
     <Style Selector="Button:not(.card)">
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <!-- 比 Fluent 默认（4）柔和一点，和卡片、面板的圆角呼应 -->
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+
+    <Style Selector="TextBox, NumericUpDown">
+        <Setter Property="CornerRadius" Value="8" />
     </Style>
 
     <Style Selector="TextBlock.fieldLabel">

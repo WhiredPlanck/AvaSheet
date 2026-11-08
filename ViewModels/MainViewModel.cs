@@ -201,6 +201,65 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    // ---------------------------------------------------------------- 外观
+
+    /// <summary>
+    /// 界面深浅主题。切换后立即生效，并写进 settings.json。
+    /// </summary>
+    public ThemeMode Theme
+    {
+        get;
+        set
+        {
+            if (!SetProperty(ref field, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsThemeSystem));
+            OnPropertyChanged(nameof(IsThemeLight));
+            OnPropertyChanged(nameof(IsThemeDark));
+            _ = ApplyThemeAsync(value);
+        }
+    } = ThemeMode.System;
+
+    public bool IsThemeSystem => Theme == ThemeMode.System;
+
+    public bool IsThemeLight => Theme == ThemeMode.Light;
+
+    public bool IsThemeDark => Theme == ThemeMode.Dark;
+
+    private async Task ApplyThemeAsync(ThemeMode mode)
+    {
+        // 先换主题，让界面立刻响应；写盘可以慢一步。
+        AppTheme.Apply(mode);
+
+        // 启动时从设置里回填不重复写盘。
+        if (!_initialized || _suspendSettingsSave)
+        {
+            return;
+        }
+
+        try
+        {
+            _settings.Theme = mode;
+            await _settingsStore.SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusText = "主题设置没能保存：" + ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private void UseSystemTheme() => Theme = ThemeMode.System;
+
+    [RelayCommand]
+    private void UseLightTheme() => Theme = ThemeMode.Light;
+
+    [RelayCommand]
+    private void UseDarkTheme() => Theme = ThemeMode.Dark;
+
     // ---------------------------------------------------------------- 沉浸式作答
 
     partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
@@ -240,6 +299,7 @@ public partial class MainViewModel : ViewModelBase
         // 回填开关当前的持久化值（这次运行实际用的模式是启动时定下的，可能不同）。
         _suspendSettingsSave = true;
         HardwareAcceleration = _settings.HardwareAcceleration;
+        Theme = _settings.Theme;
         _suspendSettingsSave = false;
 
         await ReloadBanksAsync(_settings.LastBankId);

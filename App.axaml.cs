@@ -32,6 +32,9 @@ public class App : Application
             WriteRenderDiagnostics();
         }
 
+        // 主题在创建窗口之前应用，避免先按系统主题画一帧再跳变。
+        AppTheme.Apply(AppSettingsStore.LoadForStartup().Theme);
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var progressStore = new BankProgressStore();
