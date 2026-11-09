@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ExamSystem.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="300"
+        x:Class="ExamSystem.Views.ExamResultWindow"
+        x:DataType="vm:ExamResultViewModel"
+        Title="成绩单"
+        Width="420"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+    <StackPanel Margin="26" Spacing="16">
+
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Classes="h1" Text="本次成绩" VerticalAlignment="Center" />
+            <Border Classes="pill" VerticalAlignment="Center">
+                <TextBlock Classes="pillText" Text="{Binding BankName}" />
+            </Border>
+        </StackPanel>
+
+        <Grid ColumnDefinitions="Auto,Auto,*"
+              RowDefinitions="Auto,Auto"
+              ColumnSpacing="36"
+              RowSpacing="2">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="small" Text="得分" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Classes="small" Text="正确率" />
+
+            <StackPanel Grid.Row="1" Grid.Column="0"
+                        Orientation="Horizontal"
+                        Spacing="4"
+                        VerticalAlignment="Bottom">
+                <TextBlock Classes="scoreValue" Text="{Binding ScoreText}" />
+                <TextBlock Classes="muted"
+                           Text="{Binding TotalText}"
+                           VerticalAlignment="Bottom"
+                           Margin="0,0,0,13" />
+            </StackPanel>
+
+            <TextBlock Grid.Row="1" Grid.Column="1"
+                       Text="{Binding AccuracyText}"
+                       FontSize="28"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource AccentBrush}"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,0,4" />
+        </Grid>
+
+        <TextBlock Classes="small" Text="{Binding ElapsedText}" />
+        <TextBlock Classes="muted" Text="{Binding Summary}" TextWrapping="Wrap" />
+
+        <Border Classes="notice" IsVisible="{Binding HasUnanswered}">
+            <TextBlock Classes="noticeText" Text="{Binding UnansweredText}" />
+        </Border>
+
+        <TextBlock Classes="small"
+                   Text="{Binding WrongBookNote}"
+                   IsVisible="{Binding HasWrongBookNote}"
+                   Foreground="{DynamicResource AccentBrush}"
+                   TextWrapping="Wrap" />
+
+        <Button Classes="accent"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Content="查看逐题回顾"
+                Click="OnClose"
+                Margin="0,2,0,0" />
+    </StackPanel>
+</Window>

@@ -111,6 +111,12 @@ public sealed class DialogService(Window owner) : IDialogService
         return dialog.ShowDialog(owner);
     }
 
+    public Task ShowExamResultAsync(ExamResultViewModel viewModel)
+    {
+        var dialog = new ExamResultWindow { DataContext = viewModel };
+        return dialog.ShowDialog(owner);
+    }
+
     public Task ShowAboutAsync()
     {
         var dialog = new AboutWindow();

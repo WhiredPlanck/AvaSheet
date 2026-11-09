@@ -27,7 +27,7 @@ public enum ExamPhase
     /// <summary>正在作答，可以前后翻页、随时改答案。</summary>
     Running,
 
-    /// <summary>已交卷，显示成绩与逐题回顾。</summary>
+    /// <summary>已交卷，卷面冻结、逐题显示对错与解析。</summary>
     Finished,
 }
 
@@ -94,7 +94,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         ExamPhase.Empty => "先去「管理题目」添加几道题。",
         ExamPhase.Config => "按题型组卷、限时作答，交卷后统一评分。",
         ExamPhase.Running => "可以前后翻页、随时改答案。",
-        ExamPhase.Finished => "成绩与逐题回顾都在下面。",
+        ExamPhase.Finished => "卷面已冻结，可以逐题翻看对错与解析。",
         _ => "按题型组卷、限时作答，交卷后统一评分。",
     };
 
@@ -146,8 +146,17 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     public bool IsFinished => Phase == ExamPhase.Finished;
 
-    /// <summary>作答中隐藏主窗口的顶栏和状态栏。</summary>
-    public bool IsAnswering => Phase == ExamPhase.Running;
+    /// <summary>交卷后卷面冻结：选项还能看，但不能再改。</summary>
+    public bool IsFrozen => Phase == ExamPhase.Finished;
+
+    /// <summary>作答页与交卷后的回顾页共用一套布局。</summary>
+    public bool ShowAnswerLayout => Phase is ExamPhase.Running or ExamPhase.Finished;
+
+    /// <summary>作答与回顾时隐藏页面自己的大标题，只留细顶栏。</summary>
+    public bool ShowPageHeader => !ShowAnswerLayout;
+
+    /// <summary>作答中与交卷后的回顾都隐藏主窗口的顶栏和状态栏。</summary>
+    public bool IsAnswering => ShowAnswerLayout;
 
     /// <summary>题库里各题型各有多少题（也是题量上限）。</summary>
     public int SingleAvailable { get; private set; }
@@ -395,9 +404,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     public ObservableCollection<ExamQuestionViewModel> Questions { get; } = [];
 
     public ObservableCollection<ExamNavigatorItemViewModel> Navigator { get; } = [];
-
-    /// <summary>成绩页的逐题回顾。</summary>
-    public ObservableCollection<ExamQuestionViewModel> Review => Questions;
 
     [ObservableProperty]
     public partial int CurrentIndex { get; set; }
@@ -791,6 +797,32 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
         Phase = ExamPhase.Finished;
         NotifyAll();
+
+        // 成绩单独弹一个小窗，关掉后回到冻结的卷面逐题回顾。
+        await ShowResult();
+    }
+
+    /// <summary>把当前成绩整理成小窗用的快照。</summary>
+    private ExamResultViewModel BuildResult() => new(
+        BankName,
+        ScoreText,
+        ScoreTotalText,
+        AccuracyText,
+        ElapsedText,
+        ScoreSummary,
+        HasUnanswered ? UnansweredText : null,
+        WrongBookNote);
+
+    /// <summary>重新打开成绩小窗（回顾页侧栏的「查看成绩」）。</summary>
+    [RelayCommand]
+    private async Task ShowResult()
+    {
+        if (_dialogs is null || Phase != ExamPhase.Finished)
+        {
+            return;
+        }
+
+        await _dialogs.ShowExamResultAsync(BuildResult());
     }
 
     /// <summary>把这次答错的题收进错题本；错题本本来就有，就只提示一下。</summary>
@@ -951,6 +983,9 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         OnPropertyChanged(nameof(IsConfig));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(IsFinished));
+        OnPropertyChanged(nameof(IsFrozen));
+        OnPropertyChanged(nameof(ShowAnswerLayout));
+        OnPropertyChanged(nameof(ShowPageHeader));
         OnPropertyChanged(nameof(IsAnswering));
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(BankSummaryText));
@@ -1010,7 +1045,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 }
 
 /// <summary>卷子上的一道题。</summary>
-public sealed class ExamQuestionViewModel : ObservableObject
+public sealed partial class ExamQuestionViewModel : ObservableObject
 {
     private readonly ExamViewModel _owner;
 
@@ -1050,6 +1085,9 @@ public sealed class ExamQuestionViewModel : ObservableObject
 
     public bool IsMultiple => Question.Type == QuestionType.MultipleChoice;
 
+    /// <summary>多选的提示只在作答时有用，判卷后收起。</summary>
+    public bool ShowMultipleHint => IsMultiple && !IsRevealed;
+
     public string TypeShort => Question.Type.ToShortLabel();
 
     public string Stem => Question.Stem;
@@ -1080,6 +1118,16 @@ public sealed class ExamQuestionViewModel : ObservableObject
 
     public bool IsCorrect { get; private set; }
 
+    /// <summary>已经交卷并判定过，选项不再可改，正确答案也一并标出来。</summary>
+    [ObservableProperty]
+    public partial bool IsRevealed { get; set; }
+
+    public string ResultTitle => !IsAnswered ? "未作答" : IsCorrect ? "答对了" : "答错了";
+
+    public string ResultDetail => $"正确答案：{CorrectAnswerText}";
+
+    public string ExplanationDisplay => "解析：" + ExplanationText;
+
     public string ResultText => !IsAnswered ? "未答" : IsCorrect ? "答对" : "答错";
 
     public bool HasExplanation => !string.IsNullOrWhiteSpace(Question.Explanation);
@@ -1088,6 +1136,11 @@ public sealed class ExamQuestionViewModel : ObservableObject
 
     internal void SelectOption(ExamOptionViewModel option)
     {
+        if (IsRevealed)
+        {
+            return;
+        }
+
         if (option.IsSelected)
         {
             // 单选/判断点已选项不再取消，避免误触把答案清空。
@@ -1131,8 +1184,13 @@ public sealed class ExamQuestionViewModel : ObservableObject
             option.SetRevealed(expected.Contains(option.Key));
         }
 
+        IsRevealed = true;
+
         OnPropertyChanged(nameof(IsCorrect));
         OnPropertyChanged(nameof(ResultText));
+        OnPropertyChanged(nameof(ResultTitle));
+        OnPropertyChanged(nameof(ResultDetail));
+        OnPropertyChanged(nameof(ShowMultipleHint));
     }
 }
 
@@ -1157,14 +1215,33 @@ public sealed partial class ExamOptionViewModel(ExamQuestionViewModel owner, str
     /// <summary>答错时把「本该选却没选」的项也标出来。</summary>
     public bool IsMissed => IsCorrectAnswer && !IsSelected;
 
+    /// <summary>判卷前在已选项右侧打勾，判卷后改成标记正确答案。</summary>
+    public bool ShowCheck => owner.IsRevealed ? IsCorrectAnswer : IsSelected;
+
+    /// <summary>选了但选错的项。</summary>
+    public bool IsWrongPick => owner.IsRevealed && IsSelected && !IsCorrectAnswer;
+
+    /// <summary>判卷后选项不可再点。</summary>
+    public bool IsActive => !owner.IsRevealed;
+
     public IRelayCommand SelectCommand => field ??= new RelayCommand(() => owner.SelectOption(this));
 
     internal void SetSelectedQuiet(bool value) => IsSelected = value;
+
+    partial void OnIsSelectedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowCheck));
+        OnPropertyChanged(nameof(IsWrongPick));
+        OnPropertyChanged(nameof(IsMissed));
+    }
 
     internal void SetRevealed(bool correct)
     {
         IsCorrectAnswer = correct;
         OnPropertyChanged(nameof(IsMissed));
+        OnPropertyChanged(nameof(IsWrongPick));
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(ShowCheck));
     }
 }
 
@@ -1177,11 +1254,21 @@ public sealed class ExamNavigatorItemViewModel(ExamViewModel owner, ExamQuestion
 
     public bool IsAnswered => question.IsAnswered;
 
+    /// <summary>交卷后答题卡上按对错上色。</summary>
+    public bool IsCorrect => question.IsRevealed && question.IsCorrect;
+
+    public bool IsWrong => question.IsRevealed && question.IsAnswered && !question.IsCorrect;
+
+    public bool IsSkipped => question.IsRevealed && !question.IsAnswered;
+
     public IRelayCommand JumpCommand => field ??= new RelayCommand(() => owner.GoTo(Number - 1));
 
     internal void Refresh()
     {
         OnPropertyChanged(nameof(IsCurrent));
         OnPropertyChanged(nameof(IsAnswered));
+        OnPropertyChanged(nameof(IsCorrect));
+        OnPropertyChanged(nameof(IsWrong));
+        OnPropertyChanged(nameof(IsSkipped));
     }
 }

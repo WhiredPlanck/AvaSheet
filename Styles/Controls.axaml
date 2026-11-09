@@ -371,6 +371,16 @@
         <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
     </Style>
 
+    <!-- 交卷后遇到没作答的题：既不算对也不算错 -->
+    <Style Selector="Border.resultBanner.skipped">
+        <Setter Property="Background" Value="{DynamicResource SubtleSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.resultTitle.skipped">
+        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}" />
+    </Style>
+
     <!-- 一轮结束后的成绩 -->
     <Style Selector="TextBlock.scoreValue">
         <Setter Property="FontSize" Value="44" />
