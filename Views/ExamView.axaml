@@ -378,49 +378,15 @@
                 <Border Grid.Column="1" Classes="formPanel" Padding="16" VerticalAlignment="Top">
                     <StackPanel Spacing="8">
 
-                        <!-- 作答中 -->
+                        <!-- 作答中：计时 -->
                         <StackPanel Spacing="8" IsVisible="{Binding IsRunning}">
                             <TextBlock Classes="small" Text="剩余时间" />
                             <TextBlock Classes="countdown"
                                        Classes.low="{Binding IsTimeLow}"
                                        Text="{Binding RemainingText}" />
-
-                            <Border Height="1"
-                                    Background="{DynamicResource DividerBrush}"
-                                    Margin="0,8" />
-
-                            <TextBlock Classes="small" Text="答题卡" />
-                            <ItemsControl ItemsSource="{Binding Navigator}" Margin="0,2,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ExamNavigatorItemViewModel">
-                                        <Button Classes="navChip"
-                                                Classes.current="{Binding IsCurrent}"
-                                                Classes.answered="{Binding IsAnswered}"
-                                                Content="{Binding Number}"
-                                                Command="{Binding JumpCommand}" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <TextBlock Classes="small" Text="{Binding AnsweredText}" Margin="0,4,0,0" />
-
-                            <Border Height="1"
-                                    Background="{DynamicResource DividerBrush}"
-                                    Margin="0,8" />
-
-                            <Button Classes="accent"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Content="交卷"
-                                    Command="{Binding SubmitCommand}" />
                         </StackPanel>
 
-                        <!-- 交卷后：卷面已冻结，侧栏改成成绩与回顾入口 -->
+                        <!-- 交卷后：本次成绩 -->
                         <StackPanel Spacing="8" IsVisible="{Binding IsFinished}">
                             <TextBlock Classes="small" Text="本次成绩" />
                             <StackPanel Orientation="Horizontal" Spacing="4">
@@ -437,35 +403,52 @@
                             <TextBlock Classes="small"
                                        Text="{Binding ScoreSummary}"
                                        TextWrapping="Wrap" />
+                        </StackPanel>
 
-                            <Border Height="1"
-                                    Background="{DynamicResource DividerBrush}"
-                                    Margin="0,8" />
+                        <Border Height="1"
+                                Background="{DynamicResource DividerBrush}"
+                                Margin="0,8" />
 
-                            <TextBlock Classes="small" Text="答题卡" />
-                            <ItemsControl ItemsSource="{Binding Navigator}" Margin="0,2,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ExamNavigatorItemViewModel">
-                                        <Button Classes="navChip"
-                                                Classes.current="{Binding IsCurrent}"
-                                                Classes.answered="{Binding IsAnswered}"
-                                                Classes.ok="{Binding IsCorrect}"
-                                                Classes.bad="{Binding IsWrong}"
-                                                Content="{Binding Number}"
-                                                Command="{Binding JumpCommand}" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                        <!-- 答题卡两种状态共用：交卷前的对错标记恒为 false，样式不生效 -->
+                        <TextBlock Classes="small" Text="答题卡" />
+                        <ItemsControl ItemsSource="{Binding Navigator}" Margin="0,2,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamNavigatorItemViewModel">
+                                    <Button Classes="navChip"
+                                            Classes.current="{Binding IsCurrent}"
+                                            Classes.answered="{Binding IsAnswered}"
+                                            Classes.ok="{Binding IsCorrect}"
+                                            Classes.bad="{Binding IsWrong}"
+                                            Content="{Binding Number}"
+                                            Command="{Binding JumpCommand}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
-                            <Border Height="1"
-                                    Background="{DynamicResource DividerBrush}"
-                                    Margin="0,8" />
+                        <TextBlock Classes="small"
+                                   Text="{Binding AnsweredText}"
+                                   Margin="0,4,0,0"
+                                   IsVisible="{Binding IsRunning}" />
 
+                        <Border Height="1"
+                                Background="{DynamicResource DividerBrush}"
+                                Margin="0,8" />
+
+                        <!-- 作答中：交卷 -->
+                        <Button Classes="accent"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="交卷"
+                                Command="{Binding SubmitCommand}"
+                                IsVisible="{Binding IsRunning}" />
+
+                        <!-- 交卷后：重看成绩、再考一次 -->
+                        <StackPanel Spacing="8" IsVisible="{Binding IsFinished}">
                             <Button HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center"
                                     Content="查看成绩"
