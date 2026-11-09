@@ -1,4 +1,4 @@
-# ExamSystem
+# AvaSheet（答卷）
 
 本地的题库与考试练习工具，基于 Avalonia 12 与 .NET 10，界面用 Fluent 主题。
 
@@ -13,20 +13,20 @@
 
 所有数据都存在用户目录下，不需要联网：
 
-- Windows：`%AppData%\ExamSystem`
-- Linux：`~/.config/ExamSystem`
+- Windows：`%AppData%\AvaSheet`
+- Linux：`~/.config/AvaSheet`
 
 ## 目录结构
 
 ```
-ExamSystem.slnx              解决方案
-src/ExamSystem/              主程序
+AvaSheet.slnx              解决方案
+src/AvaSheet/              主程序
   Models/                    数据模型
   Services/                  存储、导入导出、渲染与主题等基础设施
   ViewModels/                页面与列表项的视图模型
   Views/                     窗口与页面
   Styles/                    颜色令牌、控件主题与页面样式
-tests/ExamSystem.Tests/      xunit 测试
+tests/AvaSheet.Tests/      xunit 测试
 ```
 
 ## 开发
@@ -36,11 +36,11 @@ tests/ExamSystem.Tests/      xunit 测试
 ```bash
 dotnet build                        # 构建整个解决方案
 dotnet test                         # 跑全部测试
-dotnet run --project src/ExamSystem # 启动程序
-dotnet publish src/ExamSystem -c Release -r linux-x64   # Native AOT 发布
+dotnet run --project src/AvaSheet         # 启动程序
+dotnet publish src/AvaSheet -c Release -r linux-x64   # Native AOT 发布
 ```
 
-`App.axaml` 等资源以 `src/ExamSystem` 为根，测试项目通过 `ProjectReference` 引用主项目。
+`App.axaml` 等资源以 `src/AvaSheet` 为根，测试项目通过 `ProjectReference` 引用主项目。
 
 ## 启动参数
 

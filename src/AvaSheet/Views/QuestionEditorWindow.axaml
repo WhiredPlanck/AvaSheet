@@ -1,0 +1,185 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AvaSheet.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="820"
+        x:Class="AvaSheet.Views.QuestionEditorWindow"
+        x:DataType="vm:QuestionEditorViewModel"
+        Title="{Binding Title}"
+        Width="700"
+        Height="820"
+        MinWidth="620"
+        MinHeight="560"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="24,20,24,18">
+
+        <!-- 头部 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Classes="h2" Text="{Binding Title}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="18" Margin="0,0,4,0">
+
+                <!-- 题型 -->
+                <StackPanel>
+                    <TextBlock Classes="fieldLabel" Text="题型" />
+                    <Border Classes="segmented">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="typeTab"
+                                    Classes.active="{Binding IsSingleType}"
+                                    Content="单选题"
+                                    Command="{Binding UseSingleCommand}" />
+                            <Button Classes="typeTab"
+                                    Classes.active="{Binding IsMultipleType}"
+                                    Content="多选题"
+                                    Command="{Binding UseMultipleCommand}" />
+                            <Button Classes="typeTab"
+                                    Classes.active="{Binding IsTrueFalse}"
+                                    Content="判断题"
+                                    Command="{Binding UseTrueFalseCommand}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- 题干 -->
+                <StackPanel>
+                    <TextBlock Classes="fieldLabel" Text="题干" />
+                    <TextBox Text="{Binding Stem, Mode=TwoWay}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="96"
+                             VerticalContentAlignment="Top"
+                             PlaceholderText="例如：OSI 参考模型中，负责端到端可靠传输的是哪一层？" />
+                </StackPanel>
+
+                <!-- 选项（选择类） -->
+                <StackPanel IsVisible="{Binding IsChoiceType}">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                        <TextBlock Classes="fieldLabel" Text="选项与正确答案" Margin="0" VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Theme="{StaticResource LinkButtonTheme}"
+                                Content="+ 添加选项"
+                                Command="{Binding AddChoiceCommand}"
+                                IsEnabled="{Binding CanAddChoice}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Choices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ChoiceRowViewModel">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                      ColumnSpacing="10"
+                                      Margin="0,0,0,8">
+
+                                    <Border Grid.Column="0"
+                                            Width="28" Height="28"
+                                            CornerRadius="8"
+                                            Background="{DynamicResource SubtleSurfaceBrush}"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Key}"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding Text, Mode=TwoWay}"
+                                             VerticalAlignment="Center"
+                                             PlaceholderText="选项内容" />
+
+                                    <CheckBox Grid.Column="2"
+                                              Content="正确"
+                                              IsChecked="{Binding IsCorrect, Mode=TwoWay}"
+                                              VerticalAlignment="Center" />
+
+                                    <Button Grid.Column="3"
+                                            Theme="{StaticResource IconButtonTheme}"
+                                            Command="{Binding RemoveCommand}"
+                                            IsVisible="{Binding CanRemove}"
+                                            ToolTip.Tip="删除这个选项">
+                                        <PathIcon Data="{StaticResource IconTrash}" Width="15" Height="15" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- 正确答案（判断题） -->
+                <StackPanel IsVisible="{Binding IsTrueFalse}">
+                    <TextBlock Classes="fieldLabel" Text="正确答案" />
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                        <RadioButton GroupName="TrueFalseAnswer"
+                                     Content="正确"
+                                     IsChecked="{Binding IsTrueAnswer, Mode=TwoWay}" />
+                        <RadioButton GroupName="TrueFalseAnswer"
+                                     Content="错误"
+                                     IsChecked="{Binding IsFalseAnswer, Mode=TwoWay}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 解析 -->
+                <StackPanel>
+                    <TextBlock Classes="fieldLabel" Text="解析（可选）" />
+                    <TextBox Text="{Binding Explanation, Mode=TwoWay}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="76"
+                             VerticalContentAlignment="Top"
+                             PlaceholderText="答题后展示的讲解" />
+                </StackPanel>
+
+                <!-- 难度 + 标签 -->
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Classes="fieldLabel" Text="难度" Margin="0" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Slider Width="150"
+                                    Minimum="1"
+                                    Maximum="5"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Value="{Binding DifficultyValue, Mode=TwoWay}"
+                                    VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding DifficultyText}"
+                                       FontSize="13"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Spacing="6">
+                        <TextBlock Classes="fieldLabel" Text="标签（可选）" Margin="0" />
+                        <TextBox Text="{Binding TagsText, Mode=TwoWay}"
+                                 PlaceholderText="用逗号或顿号分隔，例如：OSI、协议" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 底部 -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,14,0,0">
+            <Border Grid.Column="0"
+                    Classes="notice"
+                    Margin="0,0,16,0"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Classes="noticeText" Text="{Binding ErrorMessage}" />
+            </Border>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <Button Content="取消" Click="OnCancel" MinWidth="84" />
+                <Button Classes="accent" Content="保存" Click="OnSave" MinWidth="96" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

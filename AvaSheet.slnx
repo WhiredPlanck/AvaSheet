@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AvaSheet/AvaSheet.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AvaSheet.Tests/AvaSheet.Tests.csproj" />
+  </Folder>
+</Solution>

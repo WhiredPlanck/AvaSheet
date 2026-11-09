@@ -1,0 +1,163 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AvaSheet.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1080" d:DesignHeight="620"
+             x:Class="AvaSheet.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+
+    <Design.DataContext>
+        <vm:HomeViewModel />
+    </Design.DataContext>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="40,36,40,36" RowDefinitions="Auto,*">
+
+            <StackPanel Grid.Row="0" Spacing="8">
+                <TextBlock Classes="h1" Text="{Binding Headline}" />
+                <TextBlock Classes="muted" Text="{Binding Subheadline}" />
+            </StackPanel>
+
+            <Grid Grid.Row="1"
+                  RowDefinitions="216,Auto"
+                  RowSpacing="16"
+                  Margin="0,28,0,0"
+                  VerticalAlignment="Top">
+
+                <!-- 三个主要入口 -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,*,*" ColumnSpacing="16">
+
+                    <!-- 模拟考试 -->
+                    <Button Grid.Column="0"
+                            Classes="card"
+                            Theme="{StaticResource CardButtonTheme}"
+                            Command="{Binding OpenExamCommand}">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <Border Grid.Row="0" Classes="iconTile" HorizontalAlignment="Left">
+                                <PathIcon Data="{StaticResource IconExam}"
+                                          Width="22" Height="22"
+                                          Foreground="{DynamicResource AccentBrush}" />
+                            </Border>
+
+                            <StackPanel Grid.Row="1" Spacing="7" Margin="0,16,0,0">
+                                <TextBlock Classes="cardTitle" Text="模拟考试" />
+                                <TextBlock Classes="muted"
+                                           TextWrapping="Wrap"
+                                           Text="按题型组卷、限时作答，交卷后统一评分。" />
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="2" Classes="cardAction" Text="开始 →" />
+                        </Grid>
+                    </Button>
+
+                    <!-- 平时练习 -->
+                    <Button Grid.Column="1"
+                            Classes="card"
+                            Theme="{StaticResource CardButtonTheme}"
+                            Command="{Binding OpenPracticeCommand}">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <Border Grid.Row="0" Classes="iconTile" HorizontalAlignment="Left">
+                                <PathIcon Data="{StaticResource IconPractice}"
+                                          Width="22" Height="22"
+                                          Foreground="{DynamicResource AccentBrush}" />
+                            </Border>
+
+                            <StackPanel Grid.Row="1" Spacing="7" Margin="0,16,0,0">
+                                <TextBlock Classes="cardTitle" Text="平时练习" />
+                                <TextBlock Classes="muted"
+                                           TextWrapping="Wrap"
+                                           Text="逐题即时判定，答完看解析，错题自动收录。" />
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="2" Classes="cardAction" Text="开始 →" />
+                        </Grid>
+                    </Button>
+
+                    <!-- 错题本 -->
+                    <Button Grid.Column="2"
+                            Classes="card"
+                            Theme="{StaticResource CardButtonTheme}"
+                            Command="{Binding OpenWrongBookCommand}">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <Border Grid.Row="0" Classes="iconTile" HorizontalAlignment="Left">
+                                <PathIcon Data="{StaticResource IconBook}"
+                                          Width="22" Height="22"
+                                          Foreground="{DynamicResource AccentBrush}" />
+                            </Border>
+
+                            <StackPanel Grid.Row="1" Spacing="7" Margin="0,16,0,0">
+                                <TextBlock Classes="cardTitle" Text="错题本" />
+                                <TextBlock Classes="muted"
+                                           TextWrapping="Wrap"
+                                           Text="{Binding WrongBookHint}" />
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="2" Classes="cardAction" Text="刷错题 →" />
+                        </Grid>
+                    </Button>
+                </Grid>
+
+                <!-- 题库与记录 -->
+                <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16">
+
+                    <Button Grid.Column="0"
+                            Classes="card"
+                            Theme="{StaticResource CardButtonTheme}"
+                            Padding="20,16"
+                            MinHeight="92"
+                            Command="{Binding OpenQuestionsCommand}">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                            <Border Grid.Column="0" Classes="iconTile" VerticalAlignment="Center">
+                                <PathIcon Data="{StaticResource IconQuestions}"
+                                          Width="22" Height="22"
+                                          Foreground="{DynamicResource AccentBrush}" />
+                            </Border>
+
+                            <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
+                                <TextBlock Classes="cardTitle" Text="管理题目" />
+                                <TextBlock Classes="muted"
+                                           TextWrapping="Wrap"
+                                           MaxLines="2"
+                                           Text="新增、编辑题目，支持批量导入导出。" />
+                            </StackPanel>
+
+                            <TextBlock Grid.Column="2"
+                                       Classes="cardAction"
+                                       Text="打开 →"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
+
+                    <Button Grid.Column="1"
+                            Classes="card"
+                            Theme="{StaticResource CardButtonTheme}"
+                            Padding="20,16"
+                            MinHeight="92"
+                            Command="{Binding OpenRecordsCommand}">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                            <Border Grid.Column="0" Classes="iconTile" VerticalAlignment="Center">
+                                <PathIcon Data="{StaticResource IconHistory}"
+                                          Width="22" Height="22"
+                                          Foreground="{DynamicResource AccentBrush}" />
+                            </Border>
+
+                            <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
+                                <TextBlock Classes="cardTitle" Text="考试记录" />
+                                <TextBlock Classes="muted"
+                                           TextWrapping="Wrap"
+                                           MaxLines="2"
+                                           Text="{Binding RecordsHint}" />
+                            </StackPanel>
+
+                            <TextBlock Grid.Column="2"
+                                       Classes="cardAction"
+                                       Text="查看 →"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
