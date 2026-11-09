@@ -165,6 +165,13 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     public string TrueFalseLabel => $"判断题（现有 {TrueFalseAvailable}）";
 
+    /// <summary>题库里有没有这个题型；没有时勾选框也不该能勾。</summary>
+    public bool SingleHasQuestions => SingleAvailable > 0;
+
+    public bool MultipleHasQuestions => MultipleAvailable > 0;
+
+    public bool TrueFalseHasQuestions => TrueFalseAvailable > 0;
+
     // ---- 组卷设置：各题型题量与分值 ----
 
     [ObservableProperty]
@@ -175,6 +182,20 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     [ObservableProperty]
     public partial int TrueFalseCount { get; set; }
+
+    /// <summary>这种题型是否参与组卷；取消勾选等于把题量设为 0，勾回来时恢复原来的题量。</summary>
+    [ObservableProperty]
+    public partial bool SingleEnabled { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool MultipleEnabled { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool TrueFalseEnabled { get; set; } = true;
+
+    private int _singleSaved;
+    private int _multipleSaved;
+    private int _trueFalseSaved;
 
     /// <summary>每种题型每题多少分，最小 0.5 分。</summary>
     [ObservableProperty]
@@ -257,11 +278,80 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     private static string FormatScore(double value) => value.ToString("0.##");
 
-    partial void OnSingleCountChanged(int value) => OnPaperChanged();
+    /// <summary>勾回来时恢复的题量：优先上次手填的数，没有就用默认配比。</summary>
+    private static int RestoreCount(int saved, int target, int available) =>
+        Math.Clamp(saved > 0 ? saved : Math.Min(target, available), 0, Math.Max(0, available));
 
-    partial void OnMultipleCountChanged(int value) => OnPaperChanged();
+    partial void OnSingleCountChanged(int value)
+    {
+        SyncEnabled(value, SingleEnabled, v => SingleEnabled = v, v => _singleSaved = v);
+        OnPaperChanged();
+    }
 
-    partial void OnTrueFalseCountChanged(int value) => OnPaperChanged();
+    partial void OnMultipleCountChanged(int value)
+    {
+        SyncEnabled(value, MultipleEnabled, v => MultipleEnabled = v, v => _multipleSaved = v);
+        OnPaperChanged();
+    }
+
+    partial void OnTrueFalseCountChanged(int value)
+    {
+        SyncEnabled(value, TrueFalseEnabled, v => TrueFalseEnabled = v, v => _trueFalseSaved = v);
+        OnPaperChanged();
+    }
+
+    /// <summary>题量由手填改成 0 时自动取消勾选，填回正数时自动勾上。</summary>
+    private static void SyncEnabled(int count, bool enabled, Action<bool> setEnabled, Action<int> save)
+    {
+        if (count > 0)
+        {
+            save(count);
+            if (!enabled) setEnabled(true);
+        }
+        else if (enabled)
+        {
+            setEnabled(false);
+        }
+    }
+
+    partial void OnSingleEnabledChanged(bool value)
+    {
+        if (value)
+        {
+            if (SingleCount == 0) SingleCount = RestoreCount(_singleSaved, TargetSingleChoice, SingleAvailable);
+        }
+        else if (SingleCount > 0)
+        {
+            _singleSaved = SingleCount;
+            SingleCount = 0;
+        }
+    }
+
+    partial void OnMultipleEnabledChanged(bool value)
+    {
+        if (value)
+        {
+            if (MultipleCount == 0) MultipleCount = RestoreCount(_multipleSaved, TargetMultipleChoice, MultipleAvailable);
+        }
+        else if (MultipleCount > 0)
+        {
+            _multipleSaved = MultipleCount;
+            MultipleCount = 0;
+        }
+    }
+
+    partial void OnTrueFalseEnabledChanged(bool value)
+    {
+        if (value)
+        {
+            if (TrueFalseCount == 0) TrueFalseCount = RestoreCount(_trueFalseSaved, TargetTrueFalse, TrueFalseAvailable);
+        }
+        else if (TrueFalseCount > 0)
+        {
+            _trueFalseSaved = TrueFalseCount;
+            TrueFalseCount = 0;
+        }
+    }
 
     partial void OnSingleScoreChanged(double value) => OnPaperChanged();
 
@@ -414,6 +504,14 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         SingleScore = 1;
         MultipleScore = 1;
         TrueFalseScore = 1;
+
+        // 默认勾上题库里有题的题型；上次取消勾选的也复位。
+        _singleSaved = 0;
+        _multipleSaved = 0;
+        _trueFalseSaved = 0;
+        SingleEnabled = SingleAvailable > 0;
+        MultipleEnabled = MultipleAvailable > 0;
+        TrueFalseEnabled = TrueFalseAvailable > 0;
 
         SingleCount = Math.Min(TargetSingleChoice, SingleAvailable);
         MultipleCount = Math.Min(TargetMultipleChoice, MultipleAvailable);
@@ -863,6 +961,9 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         OnPropertyChanged(nameof(SingleAvailable));
         OnPropertyChanged(nameof(MultipleAvailable));
         OnPropertyChanged(nameof(TrueFalseAvailable));
+        OnPropertyChanged(nameof(SingleHasQuestions));
+        OnPropertyChanged(nameof(MultipleHasQuestions));
+        OnPropertyChanged(nameof(TrueFalseHasQuestions));
         OnPropertyChanged(nameof(SingleCountValue));
         OnPropertyChanged(nameof(MultipleCountValue));
         OnPropertyChanged(nameof(TrueFalseCountValue));

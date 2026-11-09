@@ -83,60 +83,84 @@
                     <Border Classes="formPanel" Padding="22">
                         <StackPanel Spacing="8">
                             <TextBlock Classes="fieldLabel" Text="题型题量" />
-                            <Grid ColumnDefinitions="*,104,112"
+                            <Grid ColumnDefinitions="Auto,*,104,112"
                                   RowDefinitions="Auto,Auto,Auto,Auto"
                                   RowSpacing="6"
                                   ColumnSpacing="12">
-                                <TextBlock Grid.Row="0" Grid.Column="1"
+                                <TextBlock Grid.Row="0" Grid.Column="2"
                                            Classes="small" Text="题量"
                                            HorizontalAlignment="Center" />
-                                <TextBlock Grid.Row="0" Grid.Column="2"
+                                <TextBlock Grid.Row="0" Grid.Column="3"
                                            Classes="small" Text="每题分值（分）"
                                            HorizontalAlignment="Center" />
 
-                                <TextBlock Grid.Row="1" Grid.Column="0"
+                                <CheckBox Grid.Row="1" Grid.Column="0"
+                                          IsChecked="{Binding SingleEnabled, Mode=TwoWay}"
+                                          IsEnabled="{Binding SingleHasQuestions}"
+                                          VerticalAlignment="Center"
+                                          ToolTip.Tip="取消勾选就不从这一题型抽题。" />
+                                <TextBlock Grid.Row="1" Grid.Column="1"
                                            Text="{Binding SingleLabel}"
+                                           Margin="0,0,8,0"
                                            VerticalAlignment="Center" />
-                                <NumericUpDown Grid.Row="1" Grid.Column="1"
+                                <NumericUpDown Grid.Row="1" Grid.Column="2"
                                                Value="{Binding SingleCountValue, Mode=TwoWay}"
+                                               IsEnabled="{Binding SingleEnabled}"
                                                Minimum="0"
                                                Maximum="{Binding SingleAvailable}"
                                                Increment="1"
                                                FormatString="0" />
-                                <NumericUpDown Grid.Row="1" Grid.Column="2"
+                                <NumericUpDown Grid.Row="1" Grid.Column="3"
                                                Value="{Binding SingleScoreValue, Mode=TwoWay}"
+                                               IsEnabled="{Binding SingleEnabled}"
                                                Minimum="0.5"
                                                Maximum="100"
                                                Increment="0.5"
                                                FormatString="0.0#" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0"
+                                <CheckBox Grid.Row="2" Grid.Column="0"
+                                          IsChecked="{Binding MultipleEnabled, Mode=TwoWay}"
+                                          IsEnabled="{Binding MultipleHasQuestions}"
+                                          VerticalAlignment="Center"
+                                          ToolTip.Tip="取消勾选就不从这一题型抽题。" />
+                                <TextBlock Grid.Row="2" Grid.Column="1"
                                            Text="{Binding MultipleLabel}"
+                                           Margin="0,0,8,0"
                                            VerticalAlignment="Center" />
-                                <NumericUpDown Grid.Row="2" Grid.Column="1"
+                                <NumericUpDown Grid.Row="2" Grid.Column="2"
                                                Value="{Binding MultipleCountValue, Mode=TwoWay}"
+                                               IsEnabled="{Binding MultipleEnabled}"
                                                Minimum="0"
                                                Maximum="{Binding MultipleAvailable}"
                                                Increment="1"
                                                FormatString="0" />
-                                <NumericUpDown Grid.Row="2" Grid.Column="2"
+                                <NumericUpDown Grid.Row="2" Grid.Column="3"
                                                Value="{Binding MultipleScoreValue, Mode=TwoWay}"
+                                               IsEnabled="{Binding MultipleEnabled}"
                                                Minimum="0.5"
                                                Maximum="100"
                                                Increment="0.5"
                                                FormatString="0.0#" />
 
-                                <TextBlock Grid.Row="3" Grid.Column="0"
+                                <CheckBox Grid.Row="3" Grid.Column="0"
+                                          IsChecked="{Binding TrueFalseEnabled, Mode=TwoWay}"
+                                          IsEnabled="{Binding TrueFalseHasQuestions}"
+                                          VerticalAlignment="Center"
+                                          ToolTip.Tip="取消勾选就不从这一题型抽题。" />
+                                <TextBlock Grid.Row="3" Grid.Column="1"
                                            Text="{Binding TrueFalseLabel}"
+                                           Margin="0,0,8,0"
                                            VerticalAlignment="Center" />
-                                <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                <NumericUpDown Grid.Row="3" Grid.Column="2"
                                                Value="{Binding TrueFalseCountValue, Mode=TwoWay}"
+                                               IsEnabled="{Binding TrueFalseEnabled}"
                                                Minimum="0"
                                                Maximum="{Binding TrueFalseAvailable}"
                                                Increment="1"
                                                FormatString="0" />
-                                <NumericUpDown Grid.Row="3" Grid.Column="2"
+                                <NumericUpDown Grid.Row="3" Grid.Column="3"
                                                Value="{Binding TrueFalseScoreValue, Mode=TwoWay}"
+                                               IsEnabled="{Binding TrueFalseEnabled}"
                                                Minimum="0.5"
                                                Maximum="100"
                                                Increment="0.5"
