@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="300"
         x:Class="AvaSheet.Views.AboutWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/avasheet.ico"
         Title="关于"
         Width="360"
         SizeToContent="Height"
@@ -21,9 +21,11 @@
                 CornerRadius="18"
                 Background="{DynamicResource AccentBrush}"
                 HorizontalAlignment="Center">
-            <PathIcon Data="{StaticResource IconLogo}"
-                      Width="34" Height="34"
-                      Foreground="White" />
+            <Path Data="{StaticResource IconLogo}"
+                  Width="34" Height="34"
+                  Stretch="Uniform"
+                  Stroke="White" StrokeThickness="3"
+                  StrokeLineCap="Round" StrokeJoin="Round" />
         </Border>
 
         <TextBlock Text="答卷"

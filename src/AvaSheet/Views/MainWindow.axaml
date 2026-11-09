@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="1080" d:DesignHeight="720"
         x:Class="AvaSheet.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/avasheet.ico"
         Title="答卷"
         Width="1080"
         Height="720"
@@ -33,9 +33,11 @@
                         CornerRadius="9"
                         Background="{DynamicResource AccentBrush}"
                         VerticalAlignment="Center">
-                    <PathIcon Data="{StaticResource IconLogo}"
-                              Width="17" Height="17"
-                              Foreground="White" />
+                    <Path Data="{StaticResource IconLogo}"
+                          Width="17" Height="17"
+                          Stretch="Uniform"
+                          Stroke="White" StrokeThickness="1.5"
+                          StrokeLineCap="Round" StrokeJoin="Round" />
                 </Border>
 
                 <TextBlock Grid.Column="1"
