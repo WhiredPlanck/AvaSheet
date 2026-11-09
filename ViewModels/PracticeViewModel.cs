@@ -53,7 +53,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
     private readonly HashSet<string> _wrongIds = new(StringComparer.Ordinal);
     private readonly List<Question> _queue = [];
 
-    /// <summary>每个题型已经做完的题目 Id，落盘到题库文件的 practiceProgress。</summary>
+    /// <summary>每个题型已经做完的题目 Id，落盘到 progress/{bankId}.json 的 practiceProgress。</summary>
     private readonly Dictionary<QuestionType, HashSet<string>> _done = new()
     {
         [QuestionType.SingleChoice] = new(StringComparer.Ordinal),
@@ -233,19 +233,12 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
                 return "";
             }
 
-            if (Current.Type == QuestionType.TrueFalse)
-            {
-                return Current.Answers.FirstOrDefault() == "F" ? "错误" : "正确";
-            }
-
-            return string.Join("、", Current.Answers);
+            return AnswerText.Join(Current.Answers);
         }
     }
 
+    /// <summary>解析只在判定之后出现：解析文本放在结果条里，结果条本身只在判定后显示。</summary>
     public bool HasExplanation => !string.IsNullOrWhiteSpace(Current?.Explanation);
-
-    /// <summary>解析只在判定之后出现，避免提前剧透。</summary>
-    public bool ShowExplanation => HasExplanation && IsAnswered;
 
     /// <summary>判定后跟结果放在同一个横条里，避免解析把「下一题」挤出视野。</summary>
     public string ExplanationDisplay => HasExplanation ? $"解析：{ExplanationText}" : "";
@@ -409,7 +402,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         }
         catch (Exception ex)
         {
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex);
             Phase = PracticePhase.Empty;
             NotifyAll();
             return;
@@ -817,7 +810,7 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         }
         catch (Exception ex)
         {
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex);
         }
 
         NotifyAll();
@@ -875,7 +868,6 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         OnPropertyChanged(nameof(ResultDetail));
         OnPropertyChanged(nameof(CorrectAnswerText));
         OnPropertyChanged(nameof(HasExplanation));
-        OnPropertyChanged(nameof(ShowExplanation));
         OnPropertyChanged(nameof(ExplanationText));
         OnPropertyChanged(nameof(ExplanationDisplay));
         OnPropertyChanged(nameof(NextButtonText));
@@ -895,14 +887,6 @@ public sealed partial class PracticeViewModel : PageViewModelBase, IAnsweringSes
         OnPropertyChanged(nameof(SetupSummaryText));
         NotifyStats();
     }
-
-    private static string Describe(Exception ex) => ex switch
-    {
-        InvalidDataException or FileNotFoundException => ex.Message,
-        UnauthorizedAccessException => "没有权限读写数据目录，请检查当前用户对用户数据目录的访问权限。",
-        IOException => "读写文件失败：" + ex.Message,
-        _ => ex.Message,
-    };
 }
 
 /// <summary>练习页里的一个选项。</summary>
@@ -920,7 +904,6 @@ public sealed partial class PracticeOptionViewModel : ObservableObject
 
     public string Key { get; }
 
-    /// <summary>判断题不出 A/B，用对勾和叉表示。</summary>
     /// <summary>判断题没有 A/B 键位，界面上不显示键位徽章。</summary>
     public bool HasKey => Key is not ("T" or "F");
 

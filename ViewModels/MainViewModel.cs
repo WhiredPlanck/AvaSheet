@@ -25,7 +25,7 @@ public enum PageKind
 
 /// <summary>
 /// 主窗口的壳：顶栏（题库选择）、内容区（CurrentPage）、状态栏。
-/// 页面一律做成 ViewModelBase，由 ViewLocator 按命名约定找对应 View。
+/// 页面一律做成 ViewModelBase，由 ViewLocator 的显式映射找到对应 View。
 /// </summary>
 public partial class MainViewModel : ViewModelBase
 {

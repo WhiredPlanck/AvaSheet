@@ -38,9 +38,6 @@ public interface IBankStore
     /// <summary>保存完整题库，实现内部保证原子替换。</summary>
     Task SaveAsync(QuestionBank bank, CancellationToken ct = default);
 
-    /// <summary>判断 Id 是否已存在。</summary>
-    Task<bool> ExistsAsync(string id, CancellationToken ct = default);
-
     /// <summary>上次 <see cref="ListAsync"/> 时无法解析的文件名，用于提示用户而不是静默隐藏。</summary>
     IReadOnlyList<string> UnreadableFiles { get; }
 }

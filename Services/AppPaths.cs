@@ -27,11 +27,6 @@ public static class AppPaths
     /// <summary>考试记录文件。</summary>
     public static string RecordsFile { get; } = Path.Combine(RootDirectory, "records.json");
 
-    public static void EnsureCreated()
-    {
-        Directory.CreateDirectory(BanksDirectory);
-    }
-
     /// <summary>
     /// 题库 Id 只允许字母、数字、下划线和连字符，避免路径穿越，
     /// 也保证跨平台文件名安全。
@@ -45,9 +40,4 @@ public static class AppPaths
 
         return id.All(c => char.IsAsciiLetterOrDigit(c) || c == '_' || c == '-');
     }
-
-    public static string BankFilePath(string id) =>
-        IsValidBankId(id)
-            ? Path.Combine(BanksDirectory, id + ".json")
-            : throw new ArgumentException($"非法的题库 Id：{id}", nameof(id));
 }

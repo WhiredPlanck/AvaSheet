@@ -117,7 +117,7 @@ public sealed partial class ExamRecordsViewModel(
         catch (Exception ex)
         {
             Phase = Records.Count == 0 ? ExamRecordsPhase.Empty : ExamRecordsPhase.Ready;
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex, "考试记录");
         }
 
         NotifyStats();
@@ -147,7 +147,7 @@ public sealed partial class ExamRecordsViewModel(
         }
         catch (Exception ex)
         {
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex, "考试记录");
             OnPropertyChanged(nameof(HasError));
         }
     }
@@ -177,7 +177,7 @@ public sealed partial class ExamRecordsViewModel(
         }
         catch (Exception ex)
         {
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex, "考试记录");
             OnPropertyChanged(nameof(HasError));
         }
     }
@@ -186,7 +186,8 @@ public sealed partial class ExamRecordsViewModel(
     private void OpenExam() => openExam?.Invoke();
 
     private void NotifyStats()
-    {        OnPropertyChanged(nameof(IsLoading));
+    {
+        OnPropertyChanged(nameof(IsLoading));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasRecords));
         OnPropertyChanged(nameof(HasError));
@@ -196,13 +197,6 @@ public sealed partial class ExamRecordsViewModel(
         OnPropertyChanged(nameof(Description));
         OnPropertyChanged(nameof(Title));
     }
-
-    private static string Describe(Exception ex) => ex switch
-    {
-        UnauthorizedAccessException => "没有权限读写考试记录，检查一下数据目录的访问权限。",
-        System.IO.IOException => $"读写考试记录失败：{ex.Message}",
-        _ => $"出现意外错误：{ex.Message}",
-    };
 }
 
 /// <summary>记录列表里的一条：摘要 + 可展开的逐题作答。</summary>
@@ -315,22 +309,14 @@ public sealed class ExamRecordAnswerViewModel(ExamRecordAnswer answer, int numbe
     public string ResultText => !Answer.IsAnswered ? "未答" : Answer.IsCorrect ? "答对" : "答错";
 
     public string YourAnswerText => Answer.IsAnswered
-        ? "你的答案：" + string.Join("、", Answer.Selected.Select(DisplayKey))
+        ? "你的答案：" + AnswerText.Join(Answer.Selected)
         : "未作答";
 
-    public string CorrectAnswerText => "正确答案：" + string.Join("、", Answer.Correct.Select(DisplayKey));
+    public string CorrectAnswerText => "正确答案：" + AnswerText.Join(Answer.Correct);
 
     public bool HasExplanation => !string.IsNullOrWhiteSpace(Answer.Explanation);
 
     public string ExplanationText => string.IsNullOrWhiteSpace(Answer.Explanation)
         ? ""
         : "解析：" + Answer.Explanation;
-
-    /// <summary>判断题对用户显示「正确 / 错误」，而不是 T / F。</summary>
-    private static string DisplayKey(string key) => key switch
-    {
-        "T" => "正确",
-        "F" => "错误",
-        _ => key,
-    };
 }

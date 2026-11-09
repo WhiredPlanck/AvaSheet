@@ -167,7 +167,7 @@ public sealed partial class BankManagerViewModel(IBankStore store, IDialogServic
         }
         catch (Exception ex)
         {
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex, "题库");
         }
     }
 
@@ -186,7 +186,7 @@ public sealed partial class BankManagerViewModel(IBankStore store, IDialogServic
         }
         catch (Exception ex)
         {
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex, "题库");
         }
         finally
         {
@@ -211,14 +211,6 @@ public sealed partial class BankManagerViewModel(IBankStore store, IDialogServic
         var safe = new string(buffer).Trim();
         return string.IsNullOrEmpty(safe) ? "题库" : safe;
     }
-
-    private static string Describe(Exception ex) => ex switch
-    {
-        InvalidDataException or FileNotFoundException => ex.Message,
-        UnauthorizedAccessException => "没有权限读写数据目录，请检查当前用户对用户数据目录的访问权限。",
-        IOException => "读写文件失败：" + ex.Message,
-        _ => ex.Message,
-    };
 }
 
 /// <summary>题库列表里的一行。</summary>

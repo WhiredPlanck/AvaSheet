@@ -173,7 +173,7 @@ public sealed class BankStore(string directory, IBankProgressStore? progress = n
             SetProperty(node, "name", trimmed);
             SetProperty(node, "updatedAt", DateTimeOffset.Now.ToString("O"));
 
-            await WriteAtomicAsync(path, node.ToJsonString(JsonContext.Io), ct).ConfigureAwait(false);
+            await AtomicFile.WriteAllTextAsync(path, node.ToJsonString(JsonContext.Io), ct).ConfigureAwait(false);
             _summaryCache.Remove(Path.GetFileName(path));
         }
         finally
@@ -227,19 +227,13 @@ public sealed class BankStore(string directory, IBankProgressStore? progress = n
         {
             Directory.CreateDirectory(directory);
             var json = JsonSerializer.Serialize(bank, JsonContext.QuestionBankInfo);
-            await WriteAtomicAsync(path, json, ct).ConfigureAwait(false);
+            await AtomicFile.WriteAllTextAsync(path, json, ct).ConfigureAwait(false);
             _summaryCache.Remove(Path.GetFileName(path));
         }
         finally
         {
             _writeGate.Release();
         }
-    }
-
-    public Task<bool> ExistsAsync(string id, CancellationToken ct = default)
-    {
-        ct.ThrowIfCancellationRequested();
-        return Task.FromResult(AppPaths.IsValidBankId(id) && File.Exists(PathFor(id)));
     }
 
     // ---------------------------------------------------------------- 内部
@@ -270,12 +264,6 @@ public sealed class BankStore(string directory, IBankProgressStore? progress = n
         }
 
         return trimmed.Length > 60 ? trimmed[..60] : trimmed;
-    }
-
-    /// <summary>先写 .tmp 再原子替换，避免半截文件。</summary>
-    private static async Task WriteAtomicAsync(string path, string content, CancellationToken ct)
-    {
-        await AtomicFile.WriteAllTextAsync(path, content, ct).ConfigureAwait(false);
     }
 
     private static void SetProperty(JsonObject node, string name, string value)

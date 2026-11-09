@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -146,9 +145,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
 
     public bool IsFinished => Phase == ExamPhase.Finished;
 
-    /// <summary>交卷后卷面冻结：选项还能看，但不能再改。</summary>
-    public bool IsFrozen => Phase == ExamPhase.Finished;
-
     /// <summary>作答页与交卷后的回顾页共用一套布局。</summary>
     public bool ShowAnswerLayout => Phase is ExamPhase.Running or ExamPhase.Finished;
 
@@ -164,9 +160,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
     public int MultipleAvailable { get; private set; }
 
     public int TrueFalseAvailable { get; private set; }
-
-    /// <summary>题库里各题型各有多少题（设置页提示用）。</summary>
-    public string BankSummaryText { get; private set; } = "";
 
     public string SingleLabel => $"单选题（现有 {SingleAvailable}）";
 
@@ -493,7 +486,7 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         }
         catch (Exception ex)
         {
-            ErrorMessage = Describe(ex);
+            ErrorMessage = ErrorText.Describe(ex, "题库");
             Phase = ExamPhase.Empty;
             NotifyAll();
         }
@@ -522,11 +515,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         SingleCount = Math.Min(TargetSingleChoice, SingleAvailable);
         MultipleCount = Math.Min(TargetMultipleChoice, MultipleAvailable);
         TrueFalseCount = Math.Min(TargetTrueFalse, TrueFalseAvailable);
-
-        BankSummaryText =
-            $"题库现有：单选 {SingleAvailable} · " +
-            $"多选 {MultipleAvailable} · " +
-            $"判断 {TrueFalseAvailable}";
 
         // 题量没变化时上面的 OnPaperChanged 不会触发，这里兜一次推算时长。
         LimitMinutes = Math.Clamp(PaperSize, 1, 600);
@@ -983,12 +971,10 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         OnPropertyChanged(nameof(IsConfig));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(IsFinished));
-        OnPropertyChanged(nameof(IsFrozen));
         OnPropertyChanged(nameof(ShowAnswerLayout));
         OnPropertyChanged(nameof(ShowPageHeader));
         OnPropertyChanged(nameof(IsAnswering));
         OnPropertyChanged(nameof(HasError));
-        OnPropertyChanged(nameof(BankSummaryText));
         OnPropertyChanged(nameof(PaperTotalsText));
         OnPropertyChanged(nameof(SingleLabel));
         OnPropertyChanged(nameof(MultipleLabel));
@@ -1033,15 +1019,6 @@ public sealed partial class ExamViewModel : PageViewModelBase, IAnsweringSession
         OnPropertyChanged(nameof(CanExitWithoutPrompt));
         RefreshNavigator();
     }
-
-    private static string Describe(Exception ex) => ex switch
-    {
-        UnauthorizedAccessException => "没有权限读取题库文件，检查一下数据目录的访问权限。",
-        InvalidDataException => ex.Message,
-        FileNotFoundException => "题库文件不存在，可能已被移动或删除。",
-        IOException => $"读写题库失败：{ex.Message}",
-        _ => $"出现意外错误：{ex.Message}",
-    };
 }
 
 /// <summary>卷子上的一道题。</summary>
@@ -1100,21 +1077,9 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
 
     public bool IsAnswered => Options.Any(o => o.IsSelected);
 
-    public string AnswerKeysText => IsAnswered
-        ? string.Join("、", Options.Where(o => o.IsSelected).Select(o => DisplayKey(o.Key)))
-        : "未作答";
-
-    public string CorrectAnswerText => string.Join("、",
-        Options.Where(o => Question.Answers.Contains(o.Key, StringComparer.OrdinalIgnoreCase))
-            .Select(o => DisplayKey(o.Key)));
-
-    /// <summary>判断题对用户显示「正确 / 错误」，而不是 T / F。</summary>
-    private static string DisplayKey(string key) => key switch
-    {
-        "T" => "正确",
-        "F" => "错误",
-        _ => key,
-    };
+    public string CorrectAnswerText => AnswerText.Join(Options
+        .Where(o => Question.Answers.Contains(o.Key, StringComparer.OrdinalIgnoreCase))
+        .Select(o => o.Key));
 
     public bool IsCorrect { get; private set; }
 
@@ -1127,8 +1092,6 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
     public string ResultDetail => $"正确答案：{CorrectAnswerText}";
 
     public string ExplanationDisplay => "解析：" + ExplanationText;
-
-    public string ResultText => !IsAnswered ? "未答" : IsCorrect ? "答对" : "答错";
 
     public bool HasExplanation => !string.IsNullOrWhiteSpace(Question.Explanation);
 
@@ -1165,7 +1128,6 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(IsAnswered));
-        OnPropertyChanged(nameof(AnswerKeysText));
         _owner.OnAnswerChanged();
     }
 
@@ -1187,7 +1149,6 @@ public sealed partial class ExamQuestionViewModel : ObservableObject
         IsRevealed = true;
 
         OnPropertyChanged(nameof(IsCorrect));
-        OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(ResultTitle));
         OnPropertyChanged(nameof(ResultDetail));
         OnPropertyChanged(nameof(ShowMultipleHint));

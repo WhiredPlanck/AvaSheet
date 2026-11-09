@@ -255,12 +255,6 @@
         <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}" />
     </Style>
 
-    <Style Selector="Border.questionRow">
-        <Setter Property="Padding" Value="14,11" />
-        <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
-        <Setter Property="BorderThickness" Value="0,0,0,1" />
-    </Style>
-
     <Style Selector="TextBlock.questionStem">
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}" />
