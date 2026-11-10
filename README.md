@@ -30,6 +30,8 @@ src/AvaSheet/              主程序
   Styles/                    颜色令牌、控件主题与页面样式
 tests/AvaSheet.Tests/      xunit 测试
 tools/make-icon/           应用图标生成脚本
+packaging/linux/           Linux 打包脚本与 AppImage 用的桌面项
+.github/workflows/         持续集成与发版
 docs/                      截图等文档用图
 ```
 
@@ -41,10 +43,10 @@ docs/                      截图等文档用图
 dotnet build                        # 构建整个解决方案
 dotnet test                         # 跑全部测试
 dotnet run --project src/AvaSheet         # 启动程序
-dotnet publish src/AvaSheet -c Release -r linux-x64 -p:PublishAot=true   # Native AOT 发布
+dotnet publish src/AvaSheet -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-不带 `-p:PublishAot=true` 时是普通的框架依赖发布，目标机器需要装 .NET 运行时。
+发布产物是单文件自包含的，目标机器不需要装 .NET 运行时。
 
 `App.axaml` 等资源以 `src/AvaSheet` 为根，测试项目通过 `ProjectReference` 引用主项目。
 
@@ -58,6 +60,23 @@ dotnet publish src/AvaSheet -c Release -r linux-x64 -p:PublishAot=true   # Nativ
 | `--font-diag` | 启动后打印中文回退字体的命中情况 |
 
 默认使用软件渲染：有的显卡能初始化硬件加速，但运行一段时间后卡死，这种情况 Avalonia 无法自动回退。需要时可以在顶栏 `⋯` 菜单里打开硬件加速，重启后生效。
+
+## 发版
+
+推送到 `main` 与提交 PR 时，`.github/workflows/ci.yml` 会构建（警告视为错误）、跑测试、检查代码格式。
+
+打形如 `v1.0.0` 的标签会触发 `.github/workflows/release.yml`：先用同样的步骤验证一遍，再打 x64 与 arm64 两个架构，每个架构产出一个 AppImage 和一个 tar 包，连同 `checksums.txt` 一起挂到 GitHub Release 上。产物名如 `AvaSheet-1.0.0-linux-arm64.tar.gz`。
+
+两个架构都用单文件自包含发布，目标机器不需要装 .NET 运行时。arm64 用 GitHub 的原生 arm runner，不靠 QEMU 模拟。产物的 glibc 下限是 2.27（SkiaSharp 与 .NET 10 运行时自身的基线），麒麟 V10、统信 UOS 20 都能跑。
+
+本地打 AppImage（arm64 机器上会自动用 `aarch64` 的工具，也可以显式设 `APPIMAGE_ARCH=aarch64`）：
+
+```bash
+dotnet publish src/AvaSheet -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o publish
+packaging/linux/make-appimage.sh publish AvaSheet.AppImage 1.0.0
+```
+
+脚本需要 `mksquashfs`（squashfs-tools）；`appimagetool` 与 AppImage runtime 会自动下载到 `~/.cache/avasheet`。
 
 ## 许可证
 

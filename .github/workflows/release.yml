@@ -1,0 +1,173 @@
+name: Release
+
+# 推形如 v1.0.0 的标签即发版。
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 创建 Release 需要写权限；按 job 单独给，其余只读。
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: 构建与测试
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+
+      - name: 安装 .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 缓存 NuGet 包
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.slnx') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: 还原依赖
+        run: dotnet restore
+
+      - name: 构建
+        run: dotnet build -c Release --no-restore -warnaserror
+
+      - name: 运行测试
+        run: dotnet test -c Release --no-build --verbosity normal
+
+  package:
+    name: 打包（${{ matrix.runtime }}）
+    needs: verify
+    # arm64 用 GitHub 原生 arm runner，不靠 QEMU 模拟，编译和打包都是本机速度。
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            runtime: linux-x64
+            appimage_arch: x86_64
+          - runner: ubuntu-22.04-arm
+            runtime: linux-arm64
+            appimage_arch: aarch64
+    env:
+      RUNTIME: ${{ matrix.runtime }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+
+      - name: 读取版本号
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "标签 $GITHUB_REF_NAME 不是 v<主>.<次>.<修订> 的形式。" >&2
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: 安装 .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 缓存 NuGet 包
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ matrix.runtime }}-${{ hashFiles('**/*.csproj', '**/*.slnx') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-${{ matrix.runtime }}-
+
+      - name: 发布
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          dotnet publish src/AvaSheet \
+            -c Release \
+            -r "$RUNTIME" \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:Version="$VERSION" \
+            -o publish
+          # 调试符号在发行版里没用，留着只是白白多一个文件。
+          rm -f publish/*.pdb
+
+      # appimagetool 是预编译的 AppImage，需要宿主上有 squashfs 工具。
+      - name: 安装打包依赖
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends squashfs-tools
+
+      - name: 打 tar 包
+        run: |
+          name="AvaSheet-${{ steps.version.outputs.value }}-$RUNTIME"
+          mkdir -p dist
+          stage=$(mktemp -d)
+          mkdir -p "$stage/$name"
+          cp -a publish/. "$stage/$name/"
+          cp LICENSE README.md "$stage/$name/"
+          # publish 产物的权限随 umask 变（可能是 0744），统一成别人解包后也能读能跑。
+          chmod -R a+rX "$stage/$name"
+          chmod +x "$stage/$name/AvaSheet"
+          tar -C "$stage" -czf "dist/$name.tar.gz" "$name"
+          rm -rf "$stage"
+
+      - name: 打 AppImage
+        env:
+          APPIMAGE_ARCH: ${{ matrix.appimage_arch }}
+        run: |
+          name="AvaSheet-${{ steps.version.outputs.value }}-$RUNTIME"
+          packaging/linux/make-appimage.sh publish "dist/$name.AppImage" "${{ steps.version.outputs.value }}"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.runtime }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: 发布
+    needs: package
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+
+      - name: 下载打包产物
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 生成校验和
+        run: |
+          cd dist
+          sha256sum ./* > checksums.txt
+          cat checksums.txt
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # 重跑工作流时标签对应的 Release 可能已经存在，就地覆盖产物而不是失败。
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            gh release upload "$VERSION" dist/* --clobber
+          else
+            gh release create "$VERSION" dist/* \
+              --title "$VERSION" \
+              --generate-notes \
+              --verify-tag
+          fi

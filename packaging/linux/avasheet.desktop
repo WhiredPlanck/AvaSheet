@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=AvaSheet
+Name[zh_CN]=答卷
+GenericName=Exam practice
+GenericName[zh_CN]=考试练习
+Comment=Local question bank and exam practice
+Comment[zh_CN]=本地题库与考试练习工具
+Exec=AvaSheet
+Icon=avasheet
+Terminal=false
+Categories=Education;
+Keywords=exam;quiz;study;question;
+Keywords[zh_CN]=考试;答题;练题;题库;错题;
+StartupNotify=true
+StartupWMClass=AvaSheet

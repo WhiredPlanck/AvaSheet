@@ -1,0 +1,10 @@
+#!/bin/sh
+# AppImage 入口。AppImage 运行时挂载后设置 APPDIR 再执行本脚本；
+# 直接解包（--appimage-extract）时没有 APPDIR，按脚本自身位置找。
+set -eu
+
+if [ -n "${APPDIR:-}" ] && [ -x "$APPDIR/usr/bin/AvaSheet" ]; then
+    exec "$APPDIR/usr/bin/AvaSheet" "$@"
+fi
+
+exec "$(dirname "$(readlink -f "$0")")/usr/bin/AvaSheet" "$@"

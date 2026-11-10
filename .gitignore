@@ -5,6 +5,7 @@
 [Ll]ogs/
 artifacts/
 publish/
+dist/
 *.publishsettings
 *.binlog
 
