@@ -58,3 +58,7 @@ dotnet publish src/AvaSheet -c Release -r linux-x64 -p:PublishAot=true   # Nativ
 | `--font-diag` | 启动后打印中文回退字体的命中情况 |
 
 默认使用软件渲染：有的显卡能初始化硬件加速，但运行一段时间后卡死，这种情况 Avalonia 无法自动回退。需要时可以在顶栏 `⋯` 菜单里打开硬件加速，重启后生效。
+
+## 许可证
+
+本项目使用 [Apache License 2.0](LICENSE)。
