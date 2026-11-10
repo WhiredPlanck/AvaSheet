@@ -2,6 +2,8 @@
 
 本地的题库与考试练习工具，基于 Avalonia 12 与 .NET 10，界面用 Fluent 主题。
 
+![AvaSheet 主界面](docs/screenshot.png)
+
 ## 功能
 
 - **管理题目**：增删改题目，支持从 JSON 与 Excel（`.xlsx` / `.xls` / `.xlsb`）批量导入，导入前自动判重。
@@ -28,6 +30,7 @@ src/AvaSheet/              主程序
   Styles/                    颜色令牌、控件主题与页面样式
 tests/AvaSheet.Tests/      xunit 测试
 tools/make-icon/           应用图标生成脚本
+docs/                      截图等文档用图
 ```
 
 ## 开发
