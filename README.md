@@ -27,6 +27,7 @@ src/AvaSheet/              主程序
   Views/                     窗口与页面
   Styles/                    颜色令牌、控件主题与页面样式
 tests/AvaSheet.Tests/      xunit 测试
+tools/make-icon/           应用图标生成脚本
 ```
 
 ## 开发
