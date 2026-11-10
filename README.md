@@ -37,8 +37,10 @@ tests/AvaSheet.Tests/      xunit 测试
 dotnet build                        # 构建整个解决方案
 dotnet test                         # 跑全部测试
 dotnet run --project src/AvaSheet         # 启动程序
-dotnet publish src/AvaSheet -c Release -r linux-x64   # Native AOT 发布
+dotnet publish src/AvaSheet -c Release -r linux-x64 -p:PublishAot=true   # Native AOT 发布
 ```
+
+不带 `-p:PublishAot=true` 时是普通的框架依赖发布，目标机器需要装 .NET 运行时。
 
 `App.axaml` 等资源以 `src/AvaSheet` 为根，测试项目通过 `ProjectReference` 引用主项目。
 
